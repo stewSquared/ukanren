@@ -36,7 +36,26 @@ trait MicroKanren {
 
 object ukanren extends MicroKanren {
   def callFresh(f: LVar => Goal): Goal = ???
-  def ===(u: Any, v: Any): Goal = ???
+
+  def ===(u: Term, v: Term): Goal = { case State(s, c) =>
+    unify(u, v, s).map(newSub => unit(State(newSub, c))).getOrElse(mzero)
+  }
+
+  def unit(state: State): $tream[State] = $tream(state)
+  def mzero: $tream[State] = $tream()
+
   def disj(g1: Goal, g2: Goal): Goal = ???
   def conj(g1: Goal, g2: Goal): Goal = ???
+
+  def unify(u: Term, v: Term, s: Substitution): Option[Substitution] =
+    (walk(u, s), walk(v, s)) match {
+      case (u, v) if u == v => Some(s)
+      case (u: LVar, v) => Some(extS(u, v, s))
+      case (u, v: LVar) => Some(extS(v, u, s))
+      case (us: Seq[_], vs: Seq[_]) =>
+        (us zip vs).foldLeft(Option(s)){case (acc, (u, v)) =>
+          acc.flatMap(s => unify(u, v, s))
+        }
+      case _ => None
+    }
 }
