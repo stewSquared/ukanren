@@ -35,7 +35,9 @@ trait MicroKanren {
 }
 
 object ukanren extends MicroKanren {
-  def callFresh(f: LVar => Goal): Goal = ???
+  def callFresh(f: LVar => Goal): Goal = {
+    case State(s,c) => f(LVar(c))(State(s, c+1))
+  }
 
   def ===(u: Term, v: Term): Goal = { case State(s, c) =>
     unify(u, v, s).map(newSub => unit(State(newSub, c))).getOrElse(mzero)
