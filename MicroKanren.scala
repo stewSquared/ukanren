@@ -77,4 +77,10 @@ object ukanren extends MicroKanren {
   // Inverse eta delay. Pronounced "Snooze"
   // TODO? Use the type system to decide when to do this implicitly
   def Zzz(g: Goal): State => ImmatureStream[State] = state => immature(g(state))
+
+  def pull[T]($: $tream[T]): Stream[T] = $ match {
+    case $Nil => Stream.empty
+    case ImmatureStream(imm) => pull(imm())
+    case $Cons(h, t) => h #:: pull(t)
+  }
 }
