@@ -64,12 +64,11 @@ object MicroKanrenSuite extends TestSuite {
       assert(pull(callFresh(allIntegersAreEqual)(emptyState)).isEmpty)
     }
 
-
-    "Illustrate depth-first stream flaw"-{
+    "Interleaving streams"-{
       assert(
         pull(fivesAndSixes(emptyState))
           .take(5).flatMap(_.substitution.values)
-          .toSet.contains(6))
+          .toSet == Set(5,6))
     }
   }
 }

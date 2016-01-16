@@ -56,7 +56,7 @@ trait MicroKanren {
 
   def mplus($1: $tream[State], $2: $tream[State]): $tream[State] = $1 match {
     case $Nil => $2
-    case ImmatureStream(imm) => immature(mplus(imm(), $2))
+    case ImmatureStream(imm) => immature(mplus($2, imm()))
     case $Cons(h, t) => $Cons(h, mplus(t, $2))
   }
 
