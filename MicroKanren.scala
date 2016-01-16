@@ -15,30 +15,12 @@ trait MicroKanren {
   case class ImmatureStream[+T](proc: () => $tream[T]) extends $tream[T]
   case object $Nil extends $tream[Nothing]
 
-  type Term = Any
   case class LVar(index: Int)
+  type Term = Any
   type Substitution = Map[LVar, Term]
   case class State(substitution: Substitution, counter: Int)
   type Goal = State => $tream[State]
 
-  // Four primitive goal constructors
-  def callFresh(f: LVar => Goal): Goal
-  def ===(u: Term, v: Term): Goal
-  def disj(g1: Goal, g2: => Goal): Goal
-  def conj(g1: Goal, g2: Goal): Goal
-
-  def emptyState = State(Map.empty, 0)
-
-  // Search for a variable's value in a substitution
-  def walk(u: Term, s: Substitution): Term = u match {
-    case v: LVar => s.get(v).fold(u)(walk(_, s))
-    case _ => u
-  }
-
-  def extS(x: LVar, v: Term, s: Substitution): Substitution = s + (x -> v)
-}
-
-object ukanren extends MicroKanren {
   def callFresh(f: LVar => Goal): Goal = {
     case State(s,c) => f(LVar(c))(State(s, c+1))
   }
@@ -48,10 +30,8 @@ object ukanren extends MicroKanren {
   }
 
   def unit(state: State): $tream[State] = $Cons(state, $Nil)
-  def mzero: $tream[State] = $Nil
 
-  def disj(g1: Goal, g2: => Goal): Goal = state => mplus(g1(state), g2(state))
-  def conj(g1: Goal, g2: Goal): Goal = state => bind(g1(state), g2)
+  val mzero: $tream[State] = $Nil
 
   def unify(u: Term, v: Term, s: Substitution): Option[Substitution] =
     (walk(u, s), walk(v, s)) match {
@@ -65,12 +45,22 @@ object ukanren extends MicroKanren {
       case _ => None
     }
 
+  def walk(u: Term, s: Substitution): Term = u match {
+    case v: LVar => s.get(v).fold(u)(walk(_, s))
+    case _ => u
+  }
+
+  def extS(x: LVar, v: Term, s: Substitution): Substitution = s + (x -> v)
+
+  def disj(g1: Goal, g2: => Goal): Goal = state => mplus(g1(state), g2(state))
+
   def mplus($1: $tream[State], $2: $tream[State]): $tream[State] = $1 match {
     case $Nil => $2
     case ImmatureStream(imm) => immature(mplus(imm(), $2))
-    //case $Cons(h, t) => $Cons(h, mplus(t, $2))
     case $Cons(h, t) => $Cons(h, mplus(t, $2))
   }
+
+  def conj(g1: Goal, g2: Goal): Goal = state => bind(g1(state), g2)
 
   def bind($: $tream[State], g: Goal): $tream[State] = $ match {
     case $Nil => mzero
@@ -79,7 +69,12 @@ object ukanren extends MicroKanren {
   }
 
   def immature[T]($: => $tream[T]) = ImmatureStream(() => $)
-  // Inverse eta delay. Pronounced "Snooze"
-  def Zzz(g: Goal): State => ImmatureStream[State] = state => immature(g(state))
+}
 
+object ukanren extends MicroKanren {
+  val emptyState = State(Map.empty, 0)
+
+  // Inverse eta delay. Pronounced "Snooze"
+  // TODO? Use the type system to decide when to do this implicitly
+  def Zzz(g: Goal): State => ImmatureStream[State] = state => immature(g(state))
 }
