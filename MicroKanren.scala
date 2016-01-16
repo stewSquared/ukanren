@@ -3,7 +3,7 @@
   *  
   * I've tried to stay true to the names in the original, sometimes
   * being more explicit or tweaking to avoid naming clashes.
-  *  
+  *
   * Departures from the paper:
   * A substitution is represented by a Map rather than an association list.
   *
@@ -12,6 +12,7 @@
 trait MicroKanren {
   sealed trait $tream[+T]
   case class $Cons[+T](head: T, tail: $tream[T]) extends $tream[T]
+  case class ImmatureStream[+T](proc: () => $tream[T]) extends $tream[T]
   case object $Nil extends $tream[Nothing]
 
   type Term = Any
@@ -23,7 +24,7 @@ trait MicroKanren {
   // Four primitive goal constructors
   def callFresh(f: LVar => Goal): Goal
   def ===(u: Term, v: Term): Goal
-  def disj(g1: Goal, g2: Goal): Goal
+  def disj(g1: Goal, g2: => Goal): Goal
   def conj(g1: Goal, g2: Goal): Goal
 
   def emptyState = State(Map.empty, 0)
@@ -49,7 +50,7 @@ object ukanren extends MicroKanren {
   def unit(state: State): $tream[State] = $Cons(state, $Nil)
   def mzero: $tream[State] = $Nil
 
-  def disj(g1: Goal, g2: Goal): Goal = state => mplus(g1(state), g2(state))
+  def disj(g1: Goal, g2: => Goal): Goal = state => mplus(g1(state), g2(state))
   def conj(g1: Goal, g2: Goal): Goal = state => bind(g1(state), g2)
 
   def unify(u: Term, v: Term, s: Substitution): Option[Substitution] =
@@ -66,10 +67,19 @@ object ukanren extends MicroKanren {
 
   def mplus($1: $tream[State], $2: $tream[State]): $tream[State] = $1 match {
     case $Nil => $2
+    case ImmatureStream(imm) => immature(mplus(imm(), $2))
+    //case $Cons(h, t) => $Cons(h, mplus(t, $2))
     case $Cons(h, t) => $Cons(h, mplus(t, $2))
   }
+
   def bind($: $tream[State], g: Goal): $tream[State] = $ match {
     case $Nil => mzero
+    case ImmatureStream(imm) => immature(bind(imm(), g))
     case $Cons(h, t) => mplus(g(h), bind(t, g))
   }
+
+  def immature[T]($: => $tream[T]) = ImmatureStream(() => $)
+  // Inverse eta delay. Pronounced "Snooze"
+  def Zzz(g: Goal): State => ImmatureStream[State] = state => immature(g(state))
+
 }

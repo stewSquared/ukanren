@@ -36,10 +36,13 @@ object MicroKanrenSuite extends TestSuite {
           $Cons(State(Map(LVar(0) -> 7, LVar(1) -> 6), 2), $Nil)))
     }
 
-    "Illustrate finite stream flaw"-{
-      def fives(x: LVar): Goal = disj(===(x, 5), fives(x))
-      // Stack Overflow Error:
-      // callFresh(fives)(emptyState)
+    "Infinite streams"-{
+      def fives(x: LVar): Goal = disj(===(x, 5), Zzz(fives(x)))
+      val $Cons(fst, ImmatureStream(imm0)) = callFresh(fives)(emptyState)
+      val $Cons(snd, ImmatureStream(imm1)) = imm0()
+      val $Cons(trd, ImmatureStream(imm2)) = imm1()
+      assert(fst == snd)
+      assert(snd == trd)
     }
   }
 }
