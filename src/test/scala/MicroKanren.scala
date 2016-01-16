@@ -43,7 +43,7 @@ object MicroKanrenSuite extends TestSuite {
 
     def allIntegersAreEqual(x: LVar) = {
       def nextInt(n: Int) = if (n > 0) -n else -n+1
-      def equalTo(n: Int): Goal = conj(===(x, n), equalTo(nextInt(n)))
+      def equalTo(n: Int): Goal = conj(===(x, n), Zzz(equalTo(nextInt(n))))
       equalTo(0)
     }
 
@@ -56,8 +56,13 @@ object MicroKanrenSuite extends TestSuite {
     }
 
     "Left-handed infinite stream"-{
-      // StackOverflow
-      //callFresh(fivesLeft)(emptyState)
+      assert(pull(callFresh(fives)(emptyState)).take(5).toList ==
+        pull(callFresh(fivesLeft)(emptyState)).take(5).toList)
+
+      def falseRecursiveConjLeft(x: LVar): Goal =
+        conj(Zzz(falseRecursiveConjLeft(x)), fail)
+
+      callFresh(falseRecursiveConjLeft)(emptyState)
     }
 
     "Infinite conj"-{

@@ -33,6 +33,10 @@ trait MicroKanren {
 
   val mzero: $tream[State] = $Nil
 
+  val succeed: Goal = state => unit(state)
+
+  val fail: Goal = state => mzero
+
   def unify(u: Term, v: Term, s: Substitution): Option[Substitution] =
     (walk(u, s), walk(v, s)) match {
       case (u, v) if u == v => Some(s)
@@ -52,7 +56,7 @@ trait MicroKanren {
 
   def extS(x: LVar, v: Term, s: Substitution): Substitution = s + (x -> v)
 
-  def disj(g1: Goal, g2: => Goal): Goal = state => mplus(g1(state), g2(state))
+  def disj(g1: => Goal, g2: => Goal): Goal = state => mplus(g1(state), g2(state))
 
   def mplus($1: $tream[State], $2: $tream[State]): $tream[State] = $1 match {
     case $Nil => $2
@@ -60,7 +64,7 @@ trait MicroKanren {
     case $Cons(h, t) => $Cons(h, mplus(t, $2))
   }
 
-  def conj(g1: Goal, g2: => Goal): Goal = state => bind(g1(state), g2)
+  def conj(g1: => Goal, g2: => Goal): Goal = state => bind(g1(state), g2)
 
   def bind($: $tream[State], g: Goal): $tream[State] = $ match {
     case $Nil => mzero
