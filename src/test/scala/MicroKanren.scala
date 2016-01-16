@@ -35,5 +35,11 @@ object MicroKanrenSuite extends TestSuite {
         $Cons(State(Map(LVar(0) -> 7, LVar(1) -> 5), 2),
           $Cons(State(Map(LVar(0) -> 7, LVar(1) -> 6), 2), $Nil)))
     }
+
+    "Illustrate finite stream flaw"-{
+      def fives(x: LVar): Goal = disj(===(x, 5), fives(x))
+      // Stack Overflow Error:
+      // callFresh(fives)(emptyState)
+    }
   }
 }
