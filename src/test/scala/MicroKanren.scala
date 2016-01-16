@@ -36,13 +36,24 @@ object MicroKanrenSuite extends TestSuite {
           $Cons(State(Map(LVar(0) -> 7, LVar(1) -> 6), 2), $Nil)))
     }
 
+    def fives(x: LVar): Goal = disj(===(x, 5), Zzz(fives(x)))
+
     "Infinite streams"-{
-      def fives(x: LVar): Goal = disj(===(x, 5), Zzz(fives(x)))
       val $Cons(fst, ImmatureStream(imm0)) = callFresh(fives)(emptyState)
       val $Cons(snd, ImmatureStream(imm1)) = imm0()
       val $Cons(trd, ImmatureStream(imm2)) = imm1()
       assert(fst == snd)
       assert(snd == trd)
+    }
+
+    "Illustrate depth-first stream flaw"-{
+      def sixes(x: LVar): Goal = disj(===(x, 6), Zzz(fives(x)))
+      def fivesAndSixes = callFresh(x => disj(fives(x), sixes(x)))
+
+      assert(
+        pull(fivesAndSixes(emptyState))
+          .take(5).flatMap(_.substitution.values)
+          .toSet.contains(6))
     }
   }
 }
