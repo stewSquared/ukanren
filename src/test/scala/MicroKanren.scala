@@ -37,6 +37,15 @@ object MicroKanrenSuite extends TestSuite {
     }
 
     def fives(x: LVar): Goal = disj(===(x, 5), Zzz(fives(x)))
+    def fivesLeft(x: LVar): Goal = disj(Zzz(fivesLeft(x)), ===(x, 5))
+    def sixes(x: LVar): Goal = disj(===(x, 6), Zzz(fives(x)))
+    def fivesAndSixes = callFresh(x => disj(fives(x), sixes(x)))
+
+    def allIntegersAreEqual(x: LVar) = {
+      def nextInt(n: Int) = if (n > 0) -n else -n+1
+      def equalTo(n: Int): Goal = conj(===(x, n), equalTo(nextInt(n)))
+      equalTo(0)
+    }
 
     "Infinite streams"-{
       val $Cons(fst, ImmatureStream(imm0)) = callFresh(fives)(emptyState)
@@ -46,9 +55,18 @@ object MicroKanrenSuite extends TestSuite {
       assert(snd == trd)
     }
 
+    "Left-handed infinite stream"-{
+      // StackOverflow
+      // callFresh(fivesLeft)(emptyState)
+    }
+
+    "Infinite conj"-{
+      // StackOverflow
+      // callFresh(allIntegersAreEqual)(emptyState)
+    }
+
+
     "Illustrate depth-first stream flaw"-{
-      def sixes(x: LVar): Goal = disj(===(x, 6), Zzz(fives(x)))
-      def fivesAndSixes = callFresh(x => disj(fives(x), sixes(x)))
 
       assert(
         pull(fivesAndSixes(emptyState))
