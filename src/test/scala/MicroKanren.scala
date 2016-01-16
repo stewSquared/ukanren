@@ -57,17 +57,15 @@ object MicroKanrenSuite extends TestSuite {
 
     "Left-handed infinite stream"-{
       // StackOverflow
-      // callFresh(fivesLeft)(emptyState)
+      //callFresh(fivesLeft)(emptyState)
     }
 
     "Infinite conj"-{
-      // StackOverflow
-      // callFresh(allIntegersAreEqual)(emptyState)
+      assert(pull(callFresh(allIntegersAreEqual)(emptyState)).isEmpty)
     }
 
 
     "Illustrate depth-first stream flaw"-{
-
       assert(
         pull(fivesAndSixes(emptyState))
           .take(5).flatMap(_.substitution.values)

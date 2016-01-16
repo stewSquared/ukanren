@@ -60,7 +60,7 @@ trait MicroKanren {
     case $Cons(h, t) => $Cons(h, mplus(t, $2))
   }
 
-  def conj(g1: Goal, g2: Goal): Goal = state => bind(g1(state), g2)
+  def conj(g1: Goal, g2: => Goal): Goal = state => bind(g1(state), g2)
 
   def bind($: $tream[State], g: Goal): $tream[State] = $ match {
     case $Nil => mzero
