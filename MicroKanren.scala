@@ -46,8 +46,8 @@ object ukanren extends MicroKanren {
   def unit(state: State): $tream[State] = $tream(state)
   def mzero: $tream[State] = $tream()
 
-  def disj(g1: Goal, g2: Goal): Goal = ???
-  def conj(g1: Goal, g2: Goal): Goal = ???
+  def disj(g1: Goal, g2: Goal): Goal = state => mplus(g1(state), g2(state))
+  def conj(g1: Goal, g2: Goal): Goal = state => bind(g1(state), g2)
 
   def unify(u: Term, v: Term, s: Substitution): Option[Substitution] =
     (walk(u, s), walk(v, s)) match {
@@ -60,4 +60,7 @@ object ukanren extends MicroKanren {
         }
       case _ => None
     }
+
+  def mplus($1: $tream[State], $2: $tream[State]): $tream[State] = ???
+  def bind($: $tream[State], g: Goal): $tream[State] = ???
 }
