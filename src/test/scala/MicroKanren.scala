@@ -21,7 +21,7 @@ object MicroKanrenSuite extends TestSuite {
     "First example uKanren query"-{
       assert(
         callFresh(q => ===(q, 5))(emptyState) ==
-          $tream(State(Map(LVar(0) -> 5), 1)))
+          $Cons(State(Map(LVar(0) -> 5), 1), $Nil))
     }
 
     "Second example uKanren query"-{
@@ -32,9 +32,8 @@ object MicroKanrenSuite extends TestSuite {
           ===(b,6))))
 
       assert(ab(emptyState) ==
-        $tream(
-          State(Map(LVar(1) -> 6, LVar(0) -> 7), 2),
-          State(Map(LVar(1) -> 6, LVar(0) -> 7), 2)))
+        $Cons(State(Map(LVar(0) -> 7, LVar(1) -> 5), 2),
+          $Cons(State(Map(LVar(0) -> 7, LVar(1) -> 6), 2), $Nil)))
     }
   }
 }

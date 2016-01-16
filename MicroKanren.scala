@@ -10,7 +10,10 @@
   */
 
 trait MicroKanren {
-  case class $tream[T](ts: T*)
+  sealed trait $tream[+T]
+  case class $Cons[+T](head: T, tail: $tream[T]) extends $tream[T]
+  case object $Nil extends $tream[Nothing]
+
   type Term = Any
   case class LVar(index: Int)
   type Substitution = Map[LVar, Term]
@@ -43,8 +46,8 @@ object ukanren extends MicroKanren {
     unify(u, v, s).map(newSub => unit(State(newSub, c))).getOrElse(mzero)
   }
 
-  def unit(state: State): $tream[State] = $tream(state)
-  def mzero: $tream[State] = $tream()
+  def unit(state: State): $tream[State] = $Cons(state, $Nil)
+  def mzero: $tream[State] = $Nil
 
   def disj(g1: Goal, g2: Goal): Goal = state => mplus(g1(state), g2(state))
   def conj(g1: Goal, g2: Goal): Goal = state => bind(g1(state), g2)
@@ -61,6 +64,12 @@ object ukanren extends MicroKanren {
       case _ => None
     }
 
-  def mplus($1: $tream[State], $2: $tream[State]): $tream[State] = ???
-  def bind($: $tream[State], g: Goal): $tream[State] = ???
+  def mplus($1: $tream[State], $2: $tream[State]): $tream[State] = $1 match {
+    case $Nil => $2
+    case $Cons(h, t) => $Cons(h, mplus(t, $2))
+  }
+  def bind($: $tream[State], g: Goal): $tream[State] = $ match {
+    case $Nil => mzero
+    case $Cons(h, t) => mplus(g(h), bind(t, g))
+  }
 }
