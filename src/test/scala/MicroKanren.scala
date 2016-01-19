@@ -71,6 +71,27 @@ object MicroKanrenSuite extends TestSuite {
       // TODO: Tuples. Shapeless?
     }
 
-    // "The result of a uKanren program is a stream of satisying states"
+    "Circular substitution"-{
+      // Note: this test is implementation-specific: LVar index could change
+      def circ(v: LVar) =
+        callFresh(a => //LVar(0)
+          callFresh(b => //LVar(1)
+            callFresh(c => //LVar(2)
+              conj(===(a,b),
+                conj(===(b,c),
+                  conj(===(c,a), ===(v, 3)))))))
+
+      val lvars = 0 to 2 map LVar
+
+      for {
+        lvar <- lvars
+        sub <- lvars.map(v => pull(circ(v)(emptyState)).head.substitution)
+      } assert(walk(lvar, sub) == 3)
+    }
+
+    "Repeated binding"-{
+      val g = callFresh(q => conj(===(q, 3), ===(q, 4)))
+      assert(pull(g(emptyState)).isEmpty)
+    }
   }
 }

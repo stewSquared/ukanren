@@ -40,10 +40,10 @@ trait MicroKanren {
   def unify(u: Term, v: Term, s: Substitution): Option[Substitution] =
     (walk(u, s), walk(v, s)) match {
       case (u, v) if u == v => Some(s)
-      case (u: LVar, v) => Some(extS(u, v, s))
-      case (u, v: LVar) => Some(extS(v, u, s))
+      case (u: LVar, v) => Some(s + (u -> v))
+      case (u, v: LVar) => Some(s + (v -> u))
       case (us: Seq[_], vs: Seq[_]) if us.length == vs.length =>
-        (us zip vs).foldLeft(Option(s)){case (acc, (u, v)) =>
+        (us zip vs).foldLeft(Option(s)){ case (acc, (u, v)) =>
           acc.flatMap(s => unify(u, v, s))
         }
       case _ => None
@@ -53,8 +53,6 @@ trait MicroKanren {
     case v: LVar => s.get(v).fold(u)(walk(_, s))
     case _ => u
   }
-
-  def extS(x: LVar, v: Term, s: Substitution): Substitution = s + (x -> v)
 
   def disj(g1: => Goal, g2: => Goal): Goal = state => mplus(g1(state), g2(state))
 
