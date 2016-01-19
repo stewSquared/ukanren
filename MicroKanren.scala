@@ -42,7 +42,7 @@ trait MicroKanren {
       case (u, v) if u == v => Some(s)
       case (u: LVar, v) => Some(extS(u, v, s))
       case (u, v: LVar) => Some(extS(v, u, s))
-      case (us: Seq[_], vs: Seq[_]) =>
+      case (us: Seq[_], vs: Seq[_]) if us.length == vs.length =>
         (us zip vs).foldLeft(Option(s)){case (acc, (u, v)) =>
           acc.flatMap(s => unify(u, v, s))
         }

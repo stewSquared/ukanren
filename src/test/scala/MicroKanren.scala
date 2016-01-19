@@ -48,13 +48,27 @@ object MicroKanrenSuite extends TestSuite {
         // Apparently, fair conjunction is a problem even for core.logic
         //assert(pull(callFresh(recurseLeft)(emptyState)).isEmpty)
       }
+
+      "Interleaving streams"-{
+        assert(
+          pull(fivesAndSixes(emptyState))
+            .take(5).flatMap(_.substitution.values)
+            .toSet == Set(5,6))
+      }
     }
 
-    "Interleaving streams"-{
-      assert(
-        pull(fivesAndSixes(emptyState))
-          .take(5).flatMap(_.substitution.values)
-          .toSet == Set(5,6))
+    "Unifying data structures"-{
+      val basicSeq = callFresh(q => ===(Vector(1, 2, 3), Vector(1, 2, q)))
+      assert(3 ==
+        pull(basicSeq(emptyState)).head.substitution(LVar(0)).asInstanceOf[Int])
+
+      val lengthMismatch = callFresh(q => ===(List(1,2), List(1,2,3)))
+      assert(pull(lengthMismatch(emptyState)).isEmpty)
+
+      val emptyList = callFresh(q => ===(List.empty[Int], List.empty[Int]))
+      assert(pull(emptyList(emptyState)).nonEmpty)
+
+      // TODO: Tuples. Shapeless?
     }
 
     // "The result of a uKanren program is a stream of satisying states"
