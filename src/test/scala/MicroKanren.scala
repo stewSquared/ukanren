@@ -93,5 +93,26 @@ object MicroKanrenSuite extends TestSuite {
       val g = callFresh(q => conj(===(q, 3), ===(q, 4)))
       assert(pull(g(emptyState)).isEmpty)
     }
+
+    "variadic conj/disj"-{
+      val multiconj =
+        callFresh(q =>
+          callFresh(r =>
+            callFresh(s => conj_+(
+              ===(q, 3),
+              ===(r, 4),
+              ===(s, q)))))
+
+      assert(pull(multiconj(emptyState)).toList ==
+        List(State(Map(LVar(0) -> 3, LVar(1) -> 4, LVar(2) -> 3),3)))
+
+      // Look, no Zzz!
+      def threes(x: LVar): Goal = disj_+(threes(x), ===(x, 3), threes(x))
+      assert(pull(callFresh(threes)(emptyState)).take(3).head ==
+        State(Map(LVar(0) -> 3),1))
+
+      def notThrees(x: LVar): Goal = conj_+(===(x, 3), ===(x, 4), notThrees(x))
+      assert(pull(callFresh(notThrees)(emptyState)).isEmpty)
+    }
   }
 }

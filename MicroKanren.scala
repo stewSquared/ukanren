@@ -80,6 +80,18 @@ object ukanren extends MicroKanren {
   // TODO? Use the type system to decide when to do this implicitly
   def Zzz(g: Goal): State => ImmatureStream[State] = state => immature(g(state))
 
+  implicit class ByName[T](value: => T) {
+    def apply(): T = value
+  }
+
+  def disj_+(goals: ByName[Goal]*): Goal =
+    goals.headOption.fold(succeed)(head =>
+      disj(Zzz(head()), disj_+(goals.tail: _*)))
+
+  def conj_+(goals: ByName[Goal]*): Goal =
+    goals.headOption.fold(succeed)(head =>
+      conj(Zzz(head()), conj_+(goals.tail: _*)))
+
   def pull[T]($: $tream[T]): Stream[T] = $ match {
     case $Nil => Stream.empty
     case ImmatureStream(imm) => pull(imm())
