@@ -95,6 +95,9 @@ object MicroKanrenSuite extends TestSuite {
     }
 
     "variadic conj/disj"-{
+      assert(pull(callFresh(_ => disj_+(fail, fail, fail))(emptyState)).isEmpty)
+      assert(pull(callFresh(_ => conj_+(succeed, succeed))(emptyState)).nonEmpty)
+
       val multiconj =
         callFresh(q =>
           callFresh(r =>

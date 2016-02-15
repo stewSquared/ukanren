@@ -85,7 +85,7 @@ object ukanren extends MicroKanren {
   }
 
   def disj_+(goals: ByName[Goal]*): Goal =
-    goals.headOption.fold(succeed)(head =>
+    goals.headOption.fold(fail)(head =>
       disj(Zzz(head()), disj_+(goals.tail: _*)))
 
   def conj_+(goals: ByName[Goal]*): Goal =
