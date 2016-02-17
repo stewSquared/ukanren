@@ -97,4 +97,18 @@ object ukanren extends MicroKanren {
     case ImmatureStream(imm) => pull(imm())
     case $Cons(h, t) => h #:: pull(t)
   }
+
+
+  def fresh(f: LVar => Goal): Goal =
+    callFresh(f)
+
+  def fresh(f: (LVar, LVar) => Goal): Goal =
+    callFresh(q =>
+      callFresh(r => f(q,r)))
+
+  // TODO: This is mechanical enough to be a macro
+  def fresh(f: (LVar, LVar, LVar) => Goal): Goal =
+    callFresh(q =>
+      callFresh(r =>
+        callFresh(s => f(q,r,s))))
 }
