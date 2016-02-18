@@ -97,13 +97,13 @@ object MicroKanrenSuite extends TestSuite {
     }
 
     "variadic conj/disj"-{
-      assert(pull(callFresh(_ => disj_+(fail, fail, fail))(emptyState)).isEmpty)
-      assert(pull(callFresh(_ => conj_+(succeed, succeed))(emptyState)).nonEmpty)
+      assert(pull(callFresh(_ => disj_*(fail, fail, fail))(emptyState)).isEmpty)
+      assert(pull(callFresh(_ => conj_*(succeed, succeed))(emptyState)).nonEmpty)
 
       val multiconj =
         callFresh(q =>
           callFresh(r =>
-            callFresh(s => conj_+(
+            callFresh(s => conj_*(
               ===(q, 3),
               ===(r, 4),
               ===(s, q)))))
@@ -112,23 +112,23 @@ object MicroKanrenSuite extends TestSuite {
         List(State(Map(LVar(0) -> 3, LVar(1) -> 4, LVar(2) -> 3),3)))
 
       // Look, no Zzz!
-      def threes(x: LVar): Goal = disj_+(threes(x), ===(x, 3), threes(x))
+      def threes(x: LVar): Goal = disj_*(threes(x), ===(x, 3), threes(x))
       assert(pull(callFresh(threes)(emptyState)).take(3).head ==
         State(Map(LVar(0) -> 3),1))
 
-      def notThrees(x: LVar): Goal = conj_+(===(x, 3), ===(x, 4), notThrees(x))
+      def notThrees(x: LVar): Goal = conj_*(===(x, 3), ===(x, 4), notThrees(x))
       assert(pull(callFresh(notThrees)(emptyState)).isEmpty)
     }
 
     "variaic fresh"-{
-      val g2 = fresh((q,r) => conj_+(
+      val g2 = fresh((q,r) => conj_*(
         ===(3,q), ===(r,4)))
 
       assert(
         pull(g2(emptyState)).toList == List(
           State(Map(LVar(0) -> 3, LVar(1) -> 4),2)))
 
-      val g3 = fresh((q,r,s) => conj_+(
+      val g3 = fresh((q,r,s) => conj_*(
         ===(0,r),
         ===(q,s),
         ===(s,r)))

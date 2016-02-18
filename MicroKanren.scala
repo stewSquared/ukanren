@@ -84,13 +84,13 @@ object ukanren extends MicroKanren {
     def apply(): T = value
   }
 
-  def disj_+(goals: ByName[Goal]*): Goal =
+  def disj_*(goals: ByName[Goal]*): Goal =
     goals.headOption.fold(fail)(head =>
-      disj(Zzz(head()), disj_+(goals.tail: _*)))
+      disj(Zzz(head()), disj_*(goals.tail: _*)))
 
-  def conj_+(goals: ByName[Goal]*): Goal =
+  def conj_*(goals: ByName[Goal]*): Goal =
     goals.headOption.fold(succeed)(head =>
-      conj(Zzz(head()), conj_+(goals.tail: _*)))
+      conj(Zzz(head()), conj_*(goals.tail: _*)))
 
   def pull[T]($: $tream[T]): Stream[T] = $ match {
     case $Nil => Stream.empty
