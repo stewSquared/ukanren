@@ -98,7 +98,9 @@ object ukanren extends MicroKanren {
     case $Cons(h, t) => h #:: pull(t)
   }
 
-  def fresh(f: LVar => Goal): Goal =
+  def fresh(f: () => Goal): Goal = f()
+
+  def fresh(f: (LVar) => Goal): Goal =
     callFresh(f)
 
   def fresh(f: (LVar, LVar) => Goal): Goal =
@@ -127,4 +129,16 @@ object ukanren extends MicroKanren {
       case value => value
     }.mkString("(", ", ", ")")
   }
+
+  def run_*(f: () => Goal): Stream[String] =
+    pull(fresh(f)(emptyState)).map(reify())
+
+  def run_*(f: (LVar) => Goal): Stream[String] =
+    pull(fresh(f)(emptyState)).map(reify(LVar(0)))
+
+  def run_*(f: (LVar, LVar) => Goal): Stream[String] =
+    pull(fresh(f)(emptyState)).map(reify(LVar(0), LVar(1)))
+
+  def run_*(f: (LVar, LVar, LVar) => Goal): Stream[String] =
+    pull(fresh(f)(emptyState)).map(reify(LVar(0), LVar(1), LVar(2)))
 }

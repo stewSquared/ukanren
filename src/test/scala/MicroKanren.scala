@@ -153,5 +153,11 @@ object MicroKanrenSuite extends TestSuite {
       assert(run(fresh((q, r, s) => ===(r, s))).map(reify(q, r, s)).head == "(_0, _1, _1)")
       assert(run(succeed).map(reify()).head == "()")
     }
+
+    "run_* interface"-{
+      assert(run_*(() => fail) == Stream())
+      assert(run_*(() => succeed) == Stream("()"))
+      assert(run_*((q, r, s) => ===(r, s)) == Stream("(_0, _1, _1)"))
+    }
   }
 }
