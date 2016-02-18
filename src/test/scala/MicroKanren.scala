@@ -137,6 +137,18 @@ object MicroKanrenSuite extends TestSuite {
         State(Map(LVar(1) -> 0, LVar(0) -> LVar(2), LVar(2) -> 0),3)))
     }
 
+    "Nested binding"-{
+      val (x, y) = (LVar(0), LVar(1))
+
+      assert(State(Map(x -> 1, y -> 3), 2) ==
+        pull(fresh((x, y) => ===(List(x, 2, 3), List(1, 2, y)))(emptyState)).head
+      )
+
+      assert(State(Map(x -> (List(1, y, 3))), 2) ==
+        pull(fresh((x, y) => ===(x, List(1, y, 3)))(emptyState)).head
+      )
+    }
+
     "reification"-{
       val Seq(q, r, s) = (0 to 2) map LVar
 
@@ -148,10 +160,15 @@ object MicroKanrenSuite extends TestSuite {
       assert(run(fresh((q, r) => succeed)).map(reify(q, r)).head == "(_0, _1)")
       assert(run(fresh((q, r) => ===(q, r))).map(reify(q, r)).head == "(_0, _0)")
       assert(run(fresh((q, r) => ===(r, q))).map(reify(q, r)).head == "(_0, _0)")
-      assert(run(fresh((q, r, s) => ===(q, r))).map(reify(q, r, s)).head == "(_0, _0, _1)")
-      assert(run(fresh((q, r, s) => ===(q, s))).map(reify(q, r, s)).head == "(_0, _1, _0)")
-      assert(run(fresh((q, r, s) => ===(r, s))).map(reify(q, r, s)).head == "(_0, _1, _1)")
-      assert(run(succeed).map(reify()).head == "()")
+      assert(run_*((q, r, s) => ===(q, r)) == Stream("(_0, _0, _1)"))
+      assert(run_*((q, r, s) => ===(q, s)) == Stream("(_0, _1, _0)"))
+      assert(run_*((q, r, s) => ===(r, s)) == Stream("(_0, _1, _1)"))
+
+      assert(Stream("(List(_0, _1))") ==
+        run_*(q => fresh((x, y) => ===(q, List(x, y)))))
+
+      assert(Stream("(_0, List(_1, _2), _3)") ==
+        run_*((l, q, r) => fresh((w, x, y) => ===(q, List(x, y)))))
     }
 
     "run_* interface"-{
