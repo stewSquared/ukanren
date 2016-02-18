@@ -159,5 +159,14 @@ object MicroKanrenSuite extends TestSuite {
       assert(run_*(() => succeed) == Stream("()"))
       assert(run_*((q, r, s) => ===(r, s)) == Stream("(_0, _1, _1)"))
     }
+
+    "sample programs"-{
+      import syntax._
+
+      def teacup(x: LVar) =
+        ('tea === x) ||| ('cup === x)
+
+      assert(run_*(x => teacup(x)).mkString(", ") == "('tea), ('cup)")
+    }
   }
 }

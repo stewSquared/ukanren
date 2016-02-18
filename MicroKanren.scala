@@ -25,9 +25,10 @@ trait MicroKanren {
     case State(s,c) => f(LVar(c))(State(s, c+1))
   }
 
-  def ===(u: Term, v: Term): Goal = { case State(s, c) =>
+  def unify(u: Term, v: Term): Goal = { case State(s, c) =>
     unify(u, v, s).map(newSub => unit(State(newSub, c))).getOrElse(mzero)
   }
+  def ===(u: Term, v: Term) = unify(u,v)
 
   def unit(state: State): $tream[State] = $Cons(state, $Nil)
 
@@ -141,4 +142,15 @@ object ukanren extends MicroKanren {
 
   def run_*(f: (LVar, LVar, LVar) => Goal): Stream[String] =
     pull(fresh(f)(emptyState)).map(reify(LVar(0), LVar(1), LVar(2)))
+
+  object syntax {
+    implicit class TermOps(t: Term) {
+      def ===(t2: Term): Goal = unify(t, t2)
+    }
+
+    implicit class GoalOps(g: Goal) {
+      def |||(g2: Goal): Goal = disj(Zzz(g), Zzz(g2))
+      def &&&(g2: Goal): Goal = conj(Zzz(g), Zzz(g2))
+    }
+  }
 }
