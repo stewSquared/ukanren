@@ -98,7 +98,6 @@ object ukanren extends MicroKanren {
     case $Cons(h, t) => h #:: pull(t)
   }
 
-
   def fresh(f: LVar => Goal): Goal =
     callFresh(f)
 
@@ -111,4 +110,21 @@ object ukanren extends MicroKanren {
     callFresh(q =>
       callFresh(r =>
         callFresh(s => f(q,r,s))))
+
+  def reify(lvars: LVar*)(state: State): String = {
+    val values = lvars.map(walk(_, state.substitution))
+
+    val (reindexed: Map[Int, Int], _) = values
+      .collect{case LVar(index) => index}
+      .foldLeft[(Map[Int, Int], Int)](Map.empty, 0) {
+      case ((indices, count), lvar) =>
+        if (indices contains lvar) (indices, count)
+        else (indices + (lvar -> count), count + 1)
+    }
+
+    values.map(walk(_, state.substitution)).map {
+      case LVar(index) => "_" + reindexed(index)
+      case value => value
+    }.mkString("(", ", ", ")")
+  }
 }

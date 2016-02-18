@@ -4,6 +4,8 @@ import ukanren._
 
 object MicroKanrenSuite extends TestSuite {
   val tests = TestSuite {
+    def run(g: Goal) = pull(g(emptyState))
+
     "First example uKanren query"-{
       assert(
         callFresh(q => ===(q, 5))(emptyState) ==
@@ -133,6 +135,23 @@ object MicroKanrenSuite extends TestSuite {
 
       assert(pull(g3(emptyState)).toList == List(
         State(Map(LVar(1) -> 0, LVar(0) -> LVar(2), LVar(2) -> 0),3)))
+    }
+
+    "reification"-{
+      val Seq(q, r, s) = (0 to 2) map LVar
+
+      assert(reify(q, r, s)(
+        State(Map(q -> 1, s -> 2, r -> 0), 3)
+      ) == "(1, 0, 2)")
+
+      assert(run(fresh(q => succeed)).map(reify(q)).head == "(_0)")
+      assert(run(fresh((q, r) => succeed)).map(reify(q, r)).head == "(_0, _1)")
+      assert(run(fresh((q, r) => ===(q, r))).map(reify(q, r)).head == "(_0, _0)")
+      assert(run(fresh((q, r) => ===(r, q))).map(reify(q, r)).head == "(_0, _0)")
+      assert(run(fresh((q, r, s) => ===(q, r))).map(reify(q, r, s)).head == "(_0, _0, _1)")
+      assert(run(fresh((q, r, s) => ===(q, s))).map(reify(q, r, s)).head == "(_0, _1, _0)")
+      assert(run(fresh((q, r, s) => ===(r, s))).map(reify(q, r, s)).head == "(_0, _1, _1)")
+      assert(run(succeed).map(reify()).head == "()")
     }
   }
 }
