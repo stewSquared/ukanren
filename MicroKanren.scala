@@ -115,20 +115,28 @@ object ukanren extends MicroKanren {
         callFresh(s => f(q,r,s))))
 
   def reify(lvars: LVar*)(state: State): String = {
+    def freshIndices(terms: Seq[Term]): Seq[Int] = terms.flatMap{
+      case LVar(index) => Seq(index)
+      case vs: Seq[_] => freshIndices(vs)
+      case _ => Seq()
+    }
+
     val values = lvars.map(walk(_, state.substitution))
 
-    val (reindexed: Map[Int, Int], _) = values
-      .collect{case LVar(index) => index}
+    val (reindexed: Map[Int, Int], _) = freshIndices(values)
       .foldLeft[(Map[Int, Int], Int)](Map.empty, 0) {
       case ((indices, count), lvar) =>
         if (indices contains lvar) (indices, count)
         else (indices + (lvar -> count), count + 1)
     }
 
-    values.map(walk(_, state.substitution)).map {
+    def stringify(terms: Seq[Term]): Seq[String] = terms.map {
       case LVar(index) => "_" + reindexed(index)
-      case value => value
-    }.mkString("(", ", ", ")")
+      case vs: Seq[_] => stringify(vs).toString
+      case value => value.toString
+    }
+
+    stringify(values).mkString("(", ", ", ")")
   }
 
   def run_*(f: () => Goal): Stream[String] =
