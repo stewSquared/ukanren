@@ -3,6 +3,7 @@
   *  
   * I've tried to stay true to the names in the original, sometimes
   * being more explicit or tweaking to avoid naming clashes.
+  * TODO: Rename everything to avoid `$` symbol.
   *
   * Departures from the paper:
   * A substitution is represented by a Map rather than an association list.
@@ -51,6 +52,14 @@ trait Core {
   def walk(u: Term, s: Substitution): Term = u match {
     case v: LVar => s.get(v).fold(u)(walk(_, s))
     case _ => u
+  }
+
+  // The returned result is alway a fresh LVar or ground value
+  // ie., a returned LVar is never bound
+  // TODO: This property should be tested.
+  def walk_*(v: Term, s: Substitution): Term = walk(v, s) match {
+    case vs: Seq[_] => vs.map(walk_*(_, s))
+    case v => v
   }
 
   protected def disj(g1: => Goal, g2: => Goal): Goal = state => mplus(g1(state), g2(state))
@@ -126,7 +135,7 @@ trait Interface extends Core {
       case _ => Seq()
     }
 
-    val values = lvars.map(walk(_, state.substitution))
+    val values = lvars.map(walk_*(_, state.substitution))
 
     val (reindexed: Map[Int, Int], _) = freshIndices(values)
       .foldLeft[(Map[Int, Int], Int)](Map.empty, 0) {

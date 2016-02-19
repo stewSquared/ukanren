@@ -4,6 +4,13 @@ import utest.ExecutionContext.RunNow
 object MicroKanrenCoreSuite extends TestSuite with Core {
   val tests = TestSuite {
     def run(g: Goal) = pull(g(emptyState))
+
+    // The following returns a stable substitution. ie., this function
+    // is idempotent.  This is a necessary normalization because
+    // technically different Substitutions could behave the same way.
+    def walked(s: Substitution): Substitution =
+      s.keys.map(u => u -> walk_*(u, s)).toMap
+
     val Seq(_0, _1, _2) = 0 to 2 map LVar
 
     "example ukanren queries from Hemann Paper"-{
@@ -61,8 +68,12 @@ object MicroKanrenCoreSuite extends TestSuite with Core {
     "Unification of atoms"-{
       assert(run(callFresh(_ => unify(1, 1))).nonEmpty)
       assert(run(callFresh(_ => unify(0, 1))).isEmpty)
-      assert(State(Map(LVar(0) -> 1), 1) == run(callFresh(q => unify(q, 1))).head)
+      assert(State(Map(_0 -> 1), 1) == run(callFresh(q => unify(q, 1))).head)
       assert(run(callFresh(q => conj(unify(q, 0), unify(q, 1)))).isEmpty)
+
+      assert(Map(_0 -> 0, _1 -> 0) ==
+        walked(run(callFresh(q => callFresh(r =>
+          conj(unify(q, r), unify(q, 0))))).head.substitution))
     }
 
     "Unification of lists"-{
@@ -78,6 +89,11 @@ object MicroKanrenCoreSuite extends TestSuite with Core {
       assert(State(Map(_0 -> List(0, _1)), 2) ==
         run(callFresh(q =>
           callFresh(r => unify(q, List(0, r))))).head)
+
+      assert(Map(_0 -> List(0), _1 -> 0, _2 -> 0) ==
+        walked((run(callFresh(q => callFresh(r => callFresh(s =>
+          conj(conj(unify(q, List(r)), unify(q, List(0))),
+            unify(q, List(s))))))).head.substitution)))
     }
 
     "Unifying data structures"-{
@@ -184,6 +200,9 @@ object MicroKanrenSuite extends TestSuite {
 
       assert(Stream("(_0, List(_1, _2), _3)") ==
         run_*((l, q, r) => fresh((w, x, y) => (q === List(x, y)))))
+
+      assert(Stream("(List(0), 0)") ==
+        run_*((q, r) => (q === List(r)) &&& (q === List(0))))
     }
 
     "run_* interface"-{
