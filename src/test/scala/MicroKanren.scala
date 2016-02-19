@@ -177,13 +177,36 @@ object MicroKanrenSuite extends TestSuite {
       assert(run_*((q, r, s) => ===(r, s)) == Stream("(_0, _1, _1)"))
     }
 
-    "sample programs"-{
+    "syntax examples"-{
       import syntax._
 
       def teacup(x: LVar) =
         ('tea === x) ||| ('cup === x)
 
       assert(run_*(x => teacup(x)) == Stream("('tea)", "('cup)"))
+
+      "conso example"-{
+        def conso(a: Term, d: Term, l: Term): Goal = (d, l) match {
+          case (d: List[_], l) => (a::d) === l
+          case (d: LVar, x::xs) => (a === x) &&& (d === xs)
+          case _ => fail
+        }
+
+        assert(Stream("(_0)") ==
+          run_*(q => conso(0, List(1, 2, 3), List(0, 1, 2, 3))))
+
+        assert(Stream("(0, 1, 2)") ==
+          run_*((q, r, s) => conso(q, List(r, 2, 3), List(0, 1, s, 3))))
+
+        assert(Stream("(List(1, 2, 3))") ==
+          run_*(q => conso(0, q, List(0, 1, 2, 3))))
+
+        assert(Stream("(List(0, 1, 2, 3))") ==
+          run_*(q => conso(0, List(1, 2, 3), q)))
+
+        //run_*((q, r) => conso(0, q, r))
+        //run_*(conso _)
+      }
     }
   }
 }
