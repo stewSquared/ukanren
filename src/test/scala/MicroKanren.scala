@@ -57,6 +57,13 @@ object MicroKanrenCoreSuite extends TestSuite with Core {
       }
     }
 
+    "Unification of atoms"-{
+      assert(run(callFresh(_ => unify(1, 1))).nonEmpty)
+      assert(run(callFresh(_ => unify(0, 1))).isEmpty)
+      assert(Map(LVar(0) -> 1) == run(callFresh(q => unify(q, 1))).head.substitution)
+      assert(run(callFresh(q => conj(unify(q, 0), unify(q, 1)))).isEmpty)
+    }
+
     "Unifying data structures"-{
       val basicSeq = callFresh(q => unify(Vector(1, 2, 3), Vector(1, 2, q)))
       assert(3 ==
@@ -88,13 +95,6 @@ object MicroKanrenCoreSuite extends TestSuite with Core {
         sub <- lvars.map(v => pull(circ(v)(emptyState)).head.substitution)
       } assert(walk(lvar, sub) == 3)
     }
-
-    "Repeated binding"-{
-      // TODO: This belongs in a more general section on unification
-      val g = callFresh(q => conj(unify(q, 3), unify(q, 4)))
-      assert(pull(g(emptyState)).isEmpty)
-    }
-
   }
 }
 
