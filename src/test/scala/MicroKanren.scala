@@ -7,14 +7,14 @@ object MicroKanrenCoreSuite extends TestSuite with Core {
 
     "example ukanren queries from Hemann Paper"-{
       assert(
-        callFresh(q => ===(q, 5))(emptyState) ==
+        callFresh(q => unify(q, 5))(emptyState) ==
           $Cons(State(Map(LVar(0) -> 5), 1), $Nil))
 
       def ab: Goal = conj(
-        callFresh(a => ===(a,7)),
+        callFresh(a => unify(a,7)),
         callFresh(b => disj(
-          ===(b,5),
-          ===(b,6))))
+          unify(b,5),
+          unify(b,6))))
 
       assert(ab(emptyState) ==
         $Cons(State(Map(LVar(0) -> 7, LVar(1) -> 5), 2),
@@ -22,9 +22,9 @@ object MicroKanrenCoreSuite extends TestSuite with Core {
     }
 
     "Infinite streams"-{
-      def fives(x: LVar): Goal = disj(===(x, 5), Zzz(fives(x)))
-      def fivesLeft(x: LVar): Goal = disj(Zzz(fivesLeft(x)), ===(x, 5))
-      def sixes(x: LVar): Goal = disj(===(x, 6), Zzz(fives(x)))
+      def fives(x: LVar): Goal = disj(unify(x, 5), Zzz(fives(x)))
+      def fivesLeft(x: LVar): Goal = disj(Zzz(fivesLeft(x)), unify(x, 5))
+      def sixes(x: LVar): Goal = disj(unify(x, 6), Zzz(fives(x)))
       def fivesAndSixes = callFresh(x => disj(fives(x), sixes(x)))
 
       "Infinite disj"-{
@@ -58,14 +58,14 @@ object MicroKanrenCoreSuite extends TestSuite with Core {
     }
 
     "Unifying data structures"-{
-      val basicSeq = callFresh(q => ===(Vector(1, 2, 3), Vector(1, 2, q)))
+      val basicSeq = callFresh(q => unify(Vector(1, 2, 3), Vector(1, 2, q)))
       assert(3 ==
         pull(basicSeq(emptyState)).head.substitution(LVar(0)).asInstanceOf[Int])
 
-      val lengthMismatch = callFresh(q => ===(List(1,2), List(1,2,3)))
+      val lengthMismatch = callFresh(q => unify(List(1,2), List(1,2,3)))
       assert(pull(lengthMismatch(emptyState)).isEmpty)
 
-      val emptyList = callFresh(q => ===(List.empty[Int], List.empty[Int]))
+      val emptyList = callFresh(q => unify(List.empty[Int], List.empty[Int]))
       assert(pull(emptyList(emptyState)).nonEmpty)
 
       // TODO: Tuples. Shapeless?
@@ -77,9 +77,9 @@ object MicroKanrenCoreSuite extends TestSuite with Core {
         callFresh(a => //LVar(0)
           callFresh(b => //LVar(1)
             callFresh(c => //LVar(2)
-              conj(===(a,b),
-                conj(===(b,c),
-                  conj(===(c,a), ===(v, 3)))))))
+              conj(unify(a,b),
+                conj(unify(b,c),
+                  conj(unify(c,a), unify(v, 3)))))))
 
       val lvars = 0 to 2 map LVar
 
@@ -91,7 +91,7 @@ object MicroKanrenCoreSuite extends TestSuite with Core {
 
     "Repeated binding"-{
       // TODO: This belongs in a more general section on unification
-      val g = callFresh(q => conj(===(q, 3), ===(q, 4)))
+      val g = callFresh(q => conj(unify(q, 3), unify(q, 4)))
       assert(pull(g(emptyState)).isEmpty)
     }
 
@@ -112,34 +112,34 @@ object MicroKanrenSuite extends TestSuite {
         callFresh(q =>
           callFresh(r =>
             callFresh(s => conj_*(
-              ===(q, 3),
-              ===(r, 4),
-              ===(s, q)))))
+              (q === 3),
+              (r === 4),
+              (s === q)))))
 
       assert(pull(multiconj(emptyState)).toList ==
         List(State(Map(LVar(0) -> 3, LVar(1) -> 4, LVar(2) -> 3),3)))
 
       // Look, no Zzz!
-      def threes(x: LVar): Goal = disj_*(threes(x), ===(x, 3), threes(x))
+      def threes(x: LVar): Goal = disj_*(threes(x), (x === 3), threes(x))
       assert(pull(callFresh(threes)(emptyState)).take(3).head ==
         State(Map(LVar(0) -> 3),1))
 
-      def notThrees(x: LVar): Goal = conj_*(===(x, 3), ===(x, 4), notThrees(x))
+      def notThrees(x: LVar): Goal = conj_*((x === 3), (x === 4), notThrees(x))
       assert(pull(callFresh(notThrees)(emptyState)).isEmpty)
     }
 
     "variaic fresh"-{
       val g2 = fresh((q,r) => conj_*(
-        ===(3,q), ===(r,4)))
+        (3 === q), (r === 4)))
 
       assert(
         pull(g2(emptyState)).toList == List(
           State(Map(LVar(0) -> 3, LVar(1) -> 4),2)))
 
       val g3 = fresh((q,r,s) => conj_*(
-        ===(0,r),
-        ===(q,s),
-        ===(s,r)))
+        (0 === r),
+        (q === s),
+        (s === r)))
 
       assert(pull(g3(emptyState)).toList == List(
         State(Map(LVar(1) -> 0, LVar(0) -> LVar(2), LVar(2) -> 0),3)))
@@ -149,11 +149,11 @@ object MicroKanrenSuite extends TestSuite {
       val (x, y) = (LVar(0), LVar(1))
 
       assert(State(Map(x -> 1, y -> 3), 2) ==
-        pull(fresh((x, y) => ===(List(x, 2, 3), List(1, 2, y)))(emptyState)).head
+        pull(fresh((x, y) => (List(x, 2, 3) === List(1, 2, y)))(emptyState)).head
       )
 
       assert(State(Map(x -> (List(1, y, 3))), 2) ==
-        pull(fresh((x, y) => ===(x, List(1, y, 3)))(emptyState)).head
+        pull(fresh((x, y) => (x === List(1, y, 3)))(emptyState)).head
       )
     }
 
@@ -164,25 +164,25 @@ object MicroKanrenSuite extends TestSuite {
         State(Map(q -> 1, s -> 2, r -> 0), 3)
       ) == "(1, 0, 2)")
 
-      assert(run(fresh(q => succeed)).map(reify(q)).head == "(_0)")
-      assert(run(fresh((q, r) => succeed)).map(reify(q, r)).head == "(_0, _1)")
-      assert(run(fresh((q, r) => ===(q, r))).map(reify(q, r)).head == "(_0, _0)")
-      assert(run(fresh((q, r) => ===(r, q))).map(reify(q, r)).head == "(_0, _0)")
-      assert(run_*((q, r, s) => ===(q, r)) == Stream("(_0, _0, _1)"))
-      assert(run_*((q, r, s) => ===(q, s)) == Stream("(_0, _1, _0)"))
-      assert(run_*((q, r, s) => ===(r, s)) == Stream("(_0, _1, _1)"))
+      assert(run_*(q => succeed) == Stream("(_0)"))
+      assert(run_*((q, r) => succeed) == Stream("(_0, _1)"))
+      assert(run_*((q, r) => q === r) == Stream("(_0, _0)"))
+      assert(run_*((q, r) => r === q) == Stream("(_0, _0)"))
+      assert(run_*((q, r, s) => q === r) == Stream("(_0, _0, _1)"))
+      assert(run_*((q, r, s) => q === s) == Stream("(_0, _1, _0)"))
+      assert(run_*((q, r, s) => r === s) == Stream("(_0, _1, _1)"))
 
       assert(Stream("(List(_0, _1))") ==
-        run_*(q => fresh((x, y) => ===(q, List(x, y)))))
+        run_*(q => fresh((x, y) => (q === List(x, y)))))
 
       assert(Stream("(_0, List(_1, _2), _3)") ==
-        run_*((l, q, r) => fresh((w, x, y) => ===(q, List(x, y)))))
+        run_*((l, q, r) => fresh((w, x, y) => (q === List(x, y)))))
     }
 
     "run_* interface"-{
       assert(run_*(() => fail) == Stream())
       assert(run_*(() => succeed) == Stream("()"))
-      assert(run_*((q, r, s) => ===(r, s)) == Stream("(_0, _1, _1)"))
+      assert(run_*((q, r, s) => (r === s)) == Stream("(_0, _1, _1)"))
     }
 
     "syntax examples"-{

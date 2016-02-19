@@ -21,24 +21,19 @@ trait Core {
   case class State(substitution: Substitution, counter: Int)
   type Goal = State => $tream[State]
 
+  val succeed: Goal = state => unit(state)
+  val fail: Goal = state => mzero
+  val emptyState = State(Map.empty, 0)
+
   def callFresh(f: LVar => Goal): Goal = {
     case State(s,c) => f(LVar(c))(State(s, c+1))
   }
 
+  def unit(state: State): $tream[State] = $Cons(state, $Nil)
+  val mzero: $tream[State] = $Nil
   def unify(u: Term, v: Term): Goal = { case State(s, c) =>
     unify(u, v, s).map(newSub => unit(State(newSub, c))).getOrElse(mzero)
   }
-  def ===(u: Term, v: Term) = unify(u,v)
-
-  def unit(state: State): $tream[State] = $Cons(state, $Nil)
-
-  val mzero: $tream[State] = $Nil
-
-  val succeed: Goal = state => unit(state)
-
-  val fail: Goal = state => mzero
-
-  val emptyState = State(Map.empty, 0)
 
   def unify(u: Term, v: Term, s: Substitution): Option[Substitution] =
     (walk(u, s), walk(v, s)) match {
