@@ -4,6 +4,7 @@ import utest.ExecutionContext.RunNow
 object MicroKanrenCoreSuite extends TestSuite with Core {
   val tests = TestSuite {
     def run(g: Goal) = pull(g(emptyState))
+    val Seq(_0, _1, _2) = 0 to 2 map LVar
 
     "example ukanren queries from Hemann Paper"-{
       assert(
@@ -60,8 +61,23 @@ object MicroKanrenCoreSuite extends TestSuite with Core {
     "Unification of atoms"-{
       assert(run(callFresh(_ => unify(1, 1))).nonEmpty)
       assert(run(callFresh(_ => unify(0, 1))).isEmpty)
-      assert(Map(LVar(0) -> 1) == run(callFresh(q => unify(q, 1))).head.substitution)
+      assert(State(Map(LVar(0) -> 1), 1) == run(callFresh(q => unify(q, 1))).head)
       assert(run(callFresh(q => conj(unify(q, 0), unify(q, 1)))).isEmpty)
+    }
+
+    "Unification of lists"-{
+      assert(run(callFresh(_ => unify(List(0), List(0, 1)))).isEmpty)
+
+      assert(State(Map(_0 -> 0), 1) ==
+        run(callFresh(q => unify(List(q, 1), List(0, 1)))).head)
+
+      assert(State(Map(_0 -> 0, _1 -> 1), 2) ==
+        run(callFresh(q =>
+          callFresh(r => unify(List(q, 1), List(0, r))))).head)
+
+      assert(State(Map(_0 -> List(0, _1)), 2) ==
+        run(callFresh(q =>
+          callFresh(r => unify(q, List(0, r))))).head)
     }
 
     "Unifying data structures"-{
