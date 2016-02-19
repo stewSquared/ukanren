@@ -1,18 +1,15 @@
 import utest._
 import utest.ExecutionContext.RunNow
-import ukanren._
 
-object MicroKanrenSuite extends TestSuite {
+object MicroKanrenCoreSuite extends TestSuite with Core {
   val tests = TestSuite {
     def run(g: Goal) = pull(g(emptyState))
 
-    "First example uKanren query"-{
+    "example ukanren queries from Hemann Paper"-{
       assert(
         callFresh(q => ===(q, 5))(emptyState) ==
           $Cons(State(Map(LVar(0) -> 5), 1), $Nil))
-    }
 
-    "Second example uKanren query"-{
       def ab: Goal = conj(
         callFresh(a => ===(a,7)),
         callFresh(b => disj(
@@ -24,12 +21,12 @@ object MicroKanrenSuite extends TestSuite {
           $Cons(State(Map(LVar(0) -> 7, LVar(1) -> 6), 2), $Nil)))
     }
 
-    def fives(x: LVar): Goal = disj(===(x, 5), Zzz(fives(x)))
-    def fivesLeft(x: LVar): Goal = disj(Zzz(fivesLeft(x)), ===(x, 5))
-    def sixes(x: LVar): Goal = disj(===(x, 6), Zzz(fives(x)))
-    def fivesAndSixes = callFresh(x => disj(fives(x), sixes(x)))
-
     "Infinite streams"-{
+      def fives(x: LVar): Goal = disj(===(x, 5), Zzz(fives(x)))
+      def fivesLeft(x: LVar): Goal = disj(Zzz(fivesLeft(x)), ===(x, 5))
+      def sixes(x: LVar): Goal = disj(===(x, 6), Zzz(fives(x)))
+      def fivesAndSixes = callFresh(x => disj(fives(x), sixes(x)))
+
       "Infinite disj"-{
         val $Cons(fst, ImmatureStream(imm0)) = callFresh(fives)(emptyState)
         val $Cons(snd, ImmatureStream(imm1)) = imm0()
@@ -46,6 +43,7 @@ object MicroKanrenSuite extends TestSuite {
         def recurseLeft(x: LVar): Goal = conj(Zzz(recurseLeft(x)), fail)
 
         assert(pull(callFresh(recurseRight)(emptyState)).isEmpty)
+
         // The following causes a StackOverflow. This is difficult to fix.
         // Apparently, fair conjunction is a problem even for core.logic
         //assert(pull(callFresh(recurseLeft)(emptyState)).isEmpty)
@@ -92,9 +90,19 @@ object MicroKanrenSuite extends TestSuite {
     }
 
     "Repeated binding"-{
+      // TODO: This belongs in a more general section on unification
       val g = callFresh(q => conj(===(q, 3), ===(q, 4)))
       assert(pull(g(emptyState)).isEmpty)
     }
+
+  }
+}
+
+object MicroKanrenSuite extends TestSuite {
+  val tests = TestSuite {
+    import ukanren._
+
+    def run(g: Goal) = pull(g(emptyState))
 
     "variadic conj/disj"-{
       assert(pull(callFresh(_ => disj_*(fail, fail, fail))(emptyState)).isEmpty)
@@ -178,8 +186,6 @@ object MicroKanrenSuite extends TestSuite {
     }
 
     "syntax examples"-{
-      import syntax._
-
       def teacup(x: LVar) =
         ('tea === x) ||| ('cup === x)
 

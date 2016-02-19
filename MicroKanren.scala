@@ -9,7 +9,7 @@
   *
   */
 
-trait MicroKanren {
+trait Core {
   sealed trait $tream[+T]
   case class $Cons[+T](head: T, tail: $tream[T]) extends $tream[T]
   case class ImmatureStream[+T](proc: () => $tream[T]) extends $tream[T]
@@ -37,6 +37,8 @@ trait MicroKanren {
   val succeed: Goal = state => unit(state)
 
   val fail: Goal = state => mzero
+
+  val emptyState = State(Map.empty, 0)
 
   def unify(u: Term, v: Term, s: Substitution): Option[Substitution] =
     (walk(u, s), walk(v, s)) match {
@@ -72,17 +74,30 @@ trait MicroKanren {
   }
 
   def immature[T]($: => $tream[T]) = ImmatureStream(() => $)
-}
-
-object ukanren extends MicroKanren {
-  val emptyState = State(Map.empty, 0)
 
   // Inverse eta delay. Pronounced "Snooze"
   // TODO? Use the type system to decide when to do this implicitly
   def Zzz(g: Goal): State => ImmatureStream[State] = state => immature(g(state))
 
+  def pull[T]($: $tream[T]): Stream[T] = $ match {
+    case $Nil => Stream.empty
+    case ImmatureStream(imm) => pull(imm())
+    case $Cons(h, t) => h #:: pull(t)
+  }
+}
+
+trait Interface extends Core {
   implicit class ByName[T](value: => T) {
     def apply(): T = value
+  }
+
+  implicit class TermOps(t: Term) {
+    def ===(t2: Term): Goal = unify(t, t2)
+  }
+
+  implicit class GoalOps(g: Goal) {
+    def |||(g2: Goal): Goal = disj(Zzz(g), Zzz(g2))
+    def &&&(g2: Goal): Goal = conj(Zzz(g), Zzz(g2))
   }
 
   def disj_*(goals: ByName[Goal]*): Goal =
@@ -92,12 +107,6 @@ object ukanren extends MicroKanren {
   def conj_*(goals: ByName[Goal]*): Goal =
     goals.headOption.fold(succeed)(head =>
       conj(Zzz(head()), conj_*(goals.tail: _*)))
-
-  def pull[T]($: $tream[T]): Stream[T] = $ match {
-    case $Nil => Stream.empty
-    case ImmatureStream(imm) => pull(imm())
-    case $Cons(h, t) => h #:: pull(t)
-  }
 
   def fresh(f: () => Goal): Goal = f()
 
@@ -150,15 +159,6 @@ object ukanren extends MicroKanren {
 
   def run_*(f: (LVar, LVar, LVar) => Goal): Stream[String] =
     pull(fresh(f)(emptyState)).map(reify(LVar(0), LVar(1), LVar(2)))
-
-  object syntax {
-    implicit class TermOps(t: Term) {
-      def ===(t2: Term): Goal = unify(t, t2)
-    }
-
-    implicit class GoalOps(g: Goal) {
-      def |||(g2: Goal): Goal = disj(Zzz(g), Zzz(g2))
-      def &&&(g2: Goal): Goal = conj(Zzz(g), Zzz(g2))
-    }
-  }
 }
+
+object ukanren extends Interface with Core
