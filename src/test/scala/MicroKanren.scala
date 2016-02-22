@@ -220,29 +220,33 @@ object MicroKanrenSuite extends TestSuite {
         ('tea === x) ||| ('cup === x)
 
       assert(run_*(x => teacup(x)) == Stream("('tea)", "('cup)"))
+    }
 
-      "conso example"-{
-        def conso(a: Term, d: Term, l: Term): Goal = (d, l) match {
-          case (d: List[_], l) => (a::d) === l
-          case (d: LVar, x::xs) => (a === x) &&& (d === xs)
-          case _ => fail
-        }
+    "lcons"-{
+      def conso(a: Term, d: Term, out: Term): Goal = lcons(a, d) === out
 
-        assert(Stream("(_0)") ==
-          run_*(q => conso(0, List(1, 2, 3), List(0, 1, 2, 3))))
+      assert(Stream("(_0)") ==
+        run_*(q => conso(0, List(1, 2, 3), List(0, 1, 2, 3))))
 
-        assert(Stream("(0, 1, 2)") ==
-          run_*((q, r, s) => conso(q, List(r, 2, 3), List(0, 1, s, 3))))
+      assert(Stream("(0, 1, 2)") ==
+        run_*((q, r, s) => conso(q, List(r, 2, 3), List(0, 1, s, 3))))
 
-        assert(Stream("(List(1, 2, 3))") ==
-          run_*(q => conso(0, q, List(0, 1, 2, 3))))
+      assert(Stream("(List(1, 2, 3))") ==
+        run_*(q => conso(0, q, List(0, 1, 2, 3))))
 
-        assert(Stream("(List(0, 1, 2, 3))") ==
-          run_*(q => conso(0, List(1, 2, 3), q)))
+      assert(Stream("(List(0, 1, 2, 3))") ==
+        run_*(q => conso(0, List(1, 2, 3), q)))
 
-        //run_*((q, r) => conso(0, q, r))
-        //run_*(conso _)
-      }
+      assert(run_*((q, r) => conso(0, q, r)) == Stream("(_0, LCons(0, _0))"))
+      assert(run_*((q, r) => conso(q, List(1), r)) == Stream("(_0, List(_0, 1))"))
+      assert(run_*((q, r) => conso(q, r, List(1))) == Stream("(1, List())"))
+      assert(run_*(conso _) == Stream("(_0, _1, LCons(_0, _1))"))
+
+      assert(Stream("(LCons(_0, LCons(_1, _2)))") ==
+        run_*(out =>
+          fresh((q, r, s) =>
+            fresh(l =>
+              conso(r, s, l) &&& conso(q, l, out)))).force)
     }
   }
 }

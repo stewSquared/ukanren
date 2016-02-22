@@ -16,7 +16,16 @@ trait Core {
   case class ImmatureStream[+T](proc: () => $tream[T]) extends $tream[T]
   case object $Nil extends $tream[Nothing]
 
-  case class LVar(index: Int)
+  case class LVar(index: Int) extends LList
+  trait LList
+  case class LCons(head: Term, tail: LList) extends LList
+
+  def lcons(head: Term, tail: Term): Term = tail match {
+    case s: Seq[_] => head +: s
+    case l: LList => LCons(head, l)
+    case x => {println(x); ???}
+  }
+
   type Term = Any
   type Substitution = Map[LVar, Term]
   case class State(substitution: Substitution, counter: Int)
@@ -42,6 +51,10 @@ trait Core {
       case (u, v) if u == v => Some(s)
       case (u: LVar, v) => Some(s + (u -> v))
       case (u, v: LVar) => Some(s + (v -> u))
+      case (us: Seq[_], vs: LCons) if us.nonEmpty =>
+        unify(us.head, vs.head, s).flatMap(unify(us.tail, vs.tail, _))
+      case (vs: LCons, us: Seq[_]) if us.nonEmpty =>
+        unify(us.head, vs.head, s).flatMap(unify(us.tail, vs.tail, _))
       case (us: Seq[_], vs: Seq[_]) if us.length == vs.length =>
         (us zip vs).foldLeft(Option(s)){ case (acc, (u, v)) =>
           acc.flatMap(s => unify(u, v, s))
@@ -59,6 +72,7 @@ trait Core {
   // TODO: This property should be tested.
   def walk_*(v: Term, s: Substitution): Term = walk(v, s) match {
     case vs: Seq[_] => vs.map(walk_*(_, s))
+    case LCons(h, t) => lcons(walk_*(h, s), walk_*(t, s))
     case v => v
   }
 
@@ -132,6 +146,7 @@ trait Interface extends Core {
     def freshIndices(terms: Seq[Term]): Seq[Int] = terms.flatMap{
       case LVar(index) => Seq(index)
       case vs: Seq[_] => freshIndices(vs)
+      case p: Product => freshIndices(p.productIterator.toSeq)
       case _ => Seq()
     }
 
