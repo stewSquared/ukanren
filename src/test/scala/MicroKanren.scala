@@ -223,8 +223,6 @@ object MicroKanrenSuite extends TestSuite {
     }
 
     "lcons"-{
-      def conso(a: Term, d: Term, out: Term): Goal = lcons(a, d) === out
-
       assert(Stream("(_0)") ==
         run_*(q => conso(0, List(1, 2, 3), List(0, 1, 2, 3))))
 
@@ -247,6 +245,21 @@ object MicroKanrenSuite extends TestSuite {
           fresh((q, r, s) =>
             fresh(l =>
               conso(r, s, l) &&& conso(q, l, out)))).force)
+
+      assert(Stream("(_0, _1, LCons(_0, _1))") ==
+        run_*((a, d, l) =>
+          fresh((a2, d2) =>
+            conso(a, d, l) &&& conso(a2, d2, l))).force)
+    }
+      
+    "other list operations"-{
+      assert("Stream((List(first, last)), (List(first, _0, last)), (List(first, _0, _1, last)))" ==
+        run_*(result  =>
+          fresh((listA, listB, tailA) => conj_*(
+            conso("first", tailA, listA),
+            listB === List("last"),
+            appendo(listA, listB, result)))
+        ).take(3).force.toString)
     }
   }
 }

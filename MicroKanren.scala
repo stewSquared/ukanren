@@ -23,7 +23,6 @@ trait Core {
   def lcons(head: Term, tail: Term): Term = tail match {
     case s: Seq[_] => head +: s
     case l: LList => LCons(head, l)
-    case x => {println(x); ???}
   }
 
   type Term = Any
@@ -53,12 +52,12 @@ trait Core {
       case (u, v: LVar) => Some(s + (v -> u))
       case (us: Seq[_], vs: LCons) if us.nonEmpty =>
         unify(us.head, vs.head, s).flatMap(unify(us.tail, vs.tail, _))
-      case (vs: LCons, us: Seq[_]) if us.nonEmpty =>
+      case (us: LCons, vs: Seq[_]) if vs.nonEmpty =>
         unify(us.head, vs.head, s).flatMap(unify(us.tail, vs.tail, _))
-      case (us: Seq[_], vs: Seq[_]) if us.length == vs.length =>
-        (us zip vs).foldLeft(Option(s)){ case (acc, (u, v)) =>
-          acc.flatMap(s => unify(u, v, s))
-        }
+      case (us: LCons, vs: LCons) =>
+        unify(us.head, vs.head, s).flatMap(unify(us.tail, vs.tail, _))
+      case (us: Seq[_], vs: Seq[_]) if us.nonEmpty && vs.nonEmpty =>
+        unify(us.head, vs.head, s).flatMap(unify(us.tail, vs.tail, _))
       case _ => None
     }
 
@@ -180,6 +179,17 @@ trait Interface extends Core {
 
   def run_*(f: (LVar, LVar, LVar) => Goal): Stream[String] =
     pull(fresh(f)(emptyState)).map(reify(LVar(0), LVar(1), LVar(2)))
+
+  def conso(head: Term, tail: Term, out: Term): Goal = lcons(head, tail) === out
+  
+  def emptyo(l: Term): Goal = l === Nil
+
+  def appendo(a: Term, b: Term, result: Term): Goal = disj_*(
+    (emptyo(a) &&& (result === b)),
+    fresh((h, t, tb) => conj_*(
+      conso(h, t, a),
+      appendo(t, b, tb),
+      conso(h, tb, result))))
 }
 
 object ukanren extends Interface with Core
