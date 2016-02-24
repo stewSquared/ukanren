@@ -187,6 +187,40 @@ trait Interface extends Core {
   def run_*(f: (LVar, LVar, LVar) => Goal): Stream[String] =
     pull(fresh(f)(emptyState)).map(reify(LVar(0), LVar(1), LVar(2)))
 
+  def reifyC[T](lvar: LVar)(state: State): Either[LVar, T] = {
+    def freshIndices(term: Term): Seq[Int] = term match {
+      case LVar(index) => Seq(index)
+      case LCons(h, t) => freshIndices(h) ++ freshIndices(t)
+      case vs: Seq[_] => vs.flatMap(freshIndices)
+      case _ => Seq()
+    }
+
+    val referencedValue = (walk_*(lvar, state.substitution))
+
+    val (newId: Map[Int, Int], _) = freshIndices(referencedValue)
+      .foldLeft[(Map[Int, Int], Int)](Map.empty, 0) {
+      case ((indices, count), lvar) =>
+        if (indices contains lvar) (indices, count)
+        else (indices + (lvar -> count), count + 1)
+    }
+
+    // ideally, reindexVars would preserve type info
+    def reindexVars(term: Term): Term = term match {
+      case LVar(id) => LVar(newId(id))
+      case LCons(h, t) => lcons(reindexVars(h), reindexVars(t))
+      case vs: Seq[_] => vs.map(reindexVars)
+      case x => x
+    }
+
+    reindexVars(referencedValue) match {
+      case l: LVar => Left(l)
+      case t: Term => Right(t.asInstanceOf[T])
+    }
+  }
+
+  def runC[T](f: (LVar) => Goal): Stream[Either[LVar, T]] =
+    pull(fresh(f)(emptyState)).map(reifyC[T](LVar(0)))
+
   def conso(head: Term, tail: Term, out: Term): Goal = lcons(head, tail) === out
   
   def emptyo(l: Term): Goal = l === Nil

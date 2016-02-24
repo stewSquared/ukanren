@@ -180,7 +180,7 @@ object MicroKanrenSuite extends TestSuite {
       )
     }
 
-    "reification"-{
+    "string reification"-{
       val Seq(q, r, s) = (0 to 2) map LVar
 
       assert(reify(q, r, s)(
@@ -203,6 +203,17 @@ object MicroKanrenSuite extends TestSuite {
 
       assert(Stream("(List(0), 0)") ==
         run_*((q, r) => (q === List(r)) &&& (q === List(0))))
+    }
+
+    "concrete reification"-{
+      assert(runC[Int](q => q === 4) ==
+        Stream[Either[LVar, Int]](Right(4)))
+
+      assert(runC[Int](q => succeed) ==
+        Stream[Either[LVar, Int]](Left(LVar(0))))
+
+      assert(runC[List[Int]](q => q === List(4)) ==
+        Stream[Either[LVar, List[Int]]](Right(List(4))))
     }
 
     "run_* interface"-{
