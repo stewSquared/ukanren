@@ -203,10 +203,6 @@ object MicroKanrenSuite extends TestSuite {
 
       assert(Stream("(List(0), 0)") ==
         run_*((q, r) => (q === List(r)) &&& (q === List(0))))
-
-      assert(Stream("(_0, List(_0))") == run_*((q, r) => List(q) === r))
-      assert(Stream("(_0, Vector(_0))") == run_*((q, r) => Vector(q) === r))
-      assert(Stream("(_0, Some(_0))") == run_*((q, r) => Some(q) === r).force)
     }
 
     "run_* interface"-{

@@ -161,7 +161,6 @@ trait Interface extends Core {
     def stringify(terms: Seq[Term]): Seq[String] = terms.map {
       case LVar(index) => "_" + reindexed(index)
       case vs: Seq[_] => stringify(vs).toString
-      case p: Product => p.productPrefix + stringify(p.productIterator.toSeq).mkString("(", ", ", ")")
       case value => value.toString
     }
 
