@@ -16,9 +16,11 @@ trait Core {
   case class ImmatureStream[+T](proc: () => $tream[T]) extends $tream[T]
   case object $Nil extends $tream[Nothing]
 
-  case class LVar(index: Int) extends LList
-  trait LList
+  sealed trait LList
   case class LCons(head: Term, tail: LList) extends LList
+  case class LVar(index: Int) extends LList {
+    override def toString = "_"+index
+  }
 
   def lcons(head: Term, tail: Term): Term = tail match {
     case s: Seq[_] => head +: s
@@ -71,7 +73,7 @@ trait Core {
   // TODO: This property should be tested.
   def walk_*(v: Term, s: Substitution): Term = walk(v, s) match {
     case vs: Seq[_] => vs.map(walk_*(_, s))
-    case LCons(h, t) => lcons(walk_*(h, s), walk_*(t, s))
+    case LCons(h, t) => lcons(walk_*(h, s), walk_*(t, s)) //Document: Why not construct LCons
     case v => v
   }
 
@@ -142,29 +144,30 @@ trait Interface extends Core {
         callFresh(s => f(q,r,s))))
 
   def reify(lvars: LVar*)(state: State): String = {
-    def freshIndices(terms: Seq[Term]): Seq[Int] = terms.flatMap{
+    def freshIndices(term: Term): Seq[Int] = term match {
       case LVar(index) => Seq(index)
-      case vs: Seq[_] => freshIndices(vs)
-      case p: Product => freshIndices(p.productIterator.toSeq)
+      case LCons(h, t) => freshIndices(h) ++ freshIndices(t)
+      case vs: Seq[_] => vs.flatMap(freshIndices)
       case _ => Seq()
     }
 
-    val values = lvars.map(walk_*(_, state.substitution))
+    val referencedValues = lvars.map(walk_*(_, state.substitution))
 
-    val (reindexed: Map[Int, Int], _) = freshIndices(values)
+    val (newId: Map[Int, Int], _) = freshIndices(referencedValues)
       .foldLeft[(Map[Int, Int], Int)](Map.empty, 0) {
       case ((indices, count), lvar) =>
         if (indices contains lvar) (indices, count)
         else (indices + (lvar -> count), count + 1)
     }
 
-    def stringify(terms: Seq[Term]): Seq[String] = terms.map {
-      case LVar(index) => "_" + reindexed(index)
-      case vs: Seq[_] => stringify(vs).toString
-      case value => value.toString
+    def reindexVars(term: Term): Term = term match {
+      case LVar(id) => LVar(newId(id))
+      case LCons(h, t) => lcons(reindexVars(h), reindexVars(t))
+      case vs: Seq[_] => vs.map(reindexVars)
+      case x => x
     }
 
-    stringify(values).mkString("(", ", ", ")")
+    referencedValues.map(reindexVars).mkString("(", ", ", ")")
   }
 
   def run_*(f: () => Goal): Stream[String] =
