@@ -214,6 +214,13 @@ object MicroKanrenSuite extends TestSuite {
 
       assert(runC[List[Int]](q => q === List(4)) ==
         Stream[Either[LVar, List[Int]]](Right(List(4))))
+
+      assert(runNestedC[Int](q => q === List(4)) ==
+        Stream[Either[LVar, List[Either[LVar, Int]]]](Right(List(Right(4)))))
+
+      assert(runNestedC[Int](q => fresh(r => q === List(1, r, 3))) ==
+        Stream[Either[LVar, List[Either[LVar, Int]]]](
+          Right(List(Right(1), Left(LVar(0)), Right(3)))))
     }
 
     "run_* interface"-{
