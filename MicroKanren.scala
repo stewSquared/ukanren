@@ -17,12 +17,16 @@ trait Core {
   case object $Nil extends $tream[Nothing]
 
   sealed trait LList
-  case class LCons(head: Term, tail: LList) extends LList
+
+  case class LCons(head: Term, tail: LList) extends LList {
+    override def toString = head+"::"+tail
+  }
+
   case class LVar(index: Int) extends LList {
     override def toString = "_"+index
   }
 
-  def lcons(head: Term, tail: Term): Term = tail match {
+  protected def lcons(head: Term, tail: Term): Term = tail match {
     case s: Seq[_] => head +: s
     case l: LList => LCons(head, l)
   }
@@ -160,6 +164,7 @@ trait Interface extends Core {
         else (indices + (lvar -> count), count + 1)
     }
 
+    // ideally, reindexVars would preserve type info
     def reindexVars(term: Term): Term = term match {
       case LVar(id) => LVar(newId(id))
       case LCons(h, t) => lcons(reindexVars(h), reindexVars(t))

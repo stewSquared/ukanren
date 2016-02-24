@@ -231,18 +231,18 @@ object MicroKanrenSuite extends TestSuite {
       assert(Stream("(List(0, 1, 2, 3))") ==
         run_*(q => conso(0, List(1, 2, 3), q)))
 
-      assert(run_*((q, r) => conso(0, q, r)) == Stream("(_0, LCons(0,_0))"))
+      assert(run_*((q, r) => conso(0, q, r)) == Stream("(_0, 0::_0)"))
       assert(run_*((q, r) => conso(q, List(1), r)) == Stream("(_0, List(_0, 1))"))
       assert(run_*((q, r) => conso(q, r, List(1))) == Stream("(1, List())"))
-      assert(run_*(conso _) == Stream("(_0, _1, LCons(_0,_1))"))
+      assert(run_*(conso _) == Stream("(_0, _1, _0::_1)"))
 
-      assert(Stream("(LCons(_0,LCons(_1,_2)))") ==
+      assert(Stream("(_0::_1::_2)") ==
         run_*(out =>
           fresh((q, r, s) =>
             fresh(l =>
               conso(r, s, l) &&& conso(q, l, out)))).force)
 
-      assert(Stream("(_0, _1, LCons(_0,_1))") ==
+      assert(Stream("(_0, _1, _0::_1)") ==
         run_*((a, d, l) =>
           fresh((a2, d2) =>
             conso(a, d, l) &&& conso(a2, d2, l))).force)
