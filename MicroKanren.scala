@@ -218,7 +218,7 @@ trait Interface extends Core {
     }
   }
 
-  def reifyNestedC[T](lvar: LVar)(state: State): Either[LVar, List[Either[LVar, T]]] = {
+  def reifyNestedC[F[_] <: Seq[_],T](lvar: LVar)(state: State): Either[LVar, F[Either[LVar, T]]] = {
     def freshIndices(term: Term): Seq[Int] = term match {
       case LVar(index) => Seq(index)
       case LCons(h, t) => freshIndices(h) ++ freshIndices(t)
@@ -243,20 +243,25 @@ trait Interface extends Core {
       case x => x
     }
 
-    reindexVars(referencedValue) match {
-      case l: LVar => Left(l)
-      case ls: List[_] => Right(ls map {
+    def toEitherLVarT(t: Any): Either[LVar, T] = t match {
         case l: LVar => Left(l)
         case t: Term => Right(t.asInstanceOf[T])
-      })
+    }
+
+    reindexVars(referencedValue) match {
+      case l: LVar => Left(l)
+      case ls: F[_] => Right(
+        ls.map(t => toEitherLVarT(t))
+          .asInstanceOf[F[Either[LVar, T]]])
     }
   }
 
   def runC[T](f: (LVar) => Goal): Stream[Either[LVar, T]] =
     pull(fresh(f)(emptyState)).map(reifyC[T](LVar(0)))
 
-  def runNestedC[T](f: (LVar) => Goal): Stream[Either[LVar, List[Either[LVar, T]]]] =
-    pull(fresh(f)(emptyState)).map(reifyNestedC[T](LVar(0)))
+  def runC[F[_] <: Seq[_], T](f: (LVar) => Goal)(implicit d: DummyImplicit)
+      : Stream[Either[LVar, F[Either[LVar, T]]]] =
+    pull(fresh(f)(emptyState)).map(reifyNestedC[F, T](LVar(0)))
 
   def conso(head: Term, tail: Term, out: Term): Goal = lcons(head, tail) === out
   
