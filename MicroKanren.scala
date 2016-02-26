@@ -147,7 +147,14 @@ trait Interface extends Core {
       callFresh(r =>
         callFresh(s => f(q,r,s))))
 
-  def reify(lvars: LVar*)(state: State): String = {
+  def reify(lvars: LVar*)(state: State): Seq[Term] = {
+    def uniqueInOrder[T](items: Seq[T]): Seq[T] = items
+      .zipWithIndex
+      .groupBy(_._1)
+      .toList
+      .sortBy{case (item, indices) => indices.map(_._2).min}
+      .map(_._1)
+
     def freshIndices(term: Term): Seq[Int] = term match {
       case LVar(index) => Seq(index)
       case LCons(h, t) => freshIndices(h) ++ freshIndices(t)
@@ -155,14 +162,9 @@ trait Interface extends Core {
       case _ => Seq()
     }
 
-    val referencedValues = lvars.map(walk_*(_, state.substitution))
-
-    val (newId: Map[Int, Int], _) = freshIndices(referencedValues)
-      .foldLeft[(Map[Int, Int], Int)](Map.empty, 0) {
-      case ((indices, count), lvar) =>
-        if (indices contains lvar) (indices, count)
-        else (indices + (lvar -> count), count + 1)
-    }
+    val walkedValues = lvars.map(walk_*(_, state.substitution))
+    val newId: Map[Int, Int] = uniqueInOrder(walkedValues.flatMap(freshIndices))
+      .zipWithIndex.toMap
 
     // ideally, reindexVars would preserve type info
     def reindexVars(term: Term): Term = term match {
@@ -172,83 +174,37 @@ trait Interface extends Core {
       case x => x
     }
 
-    referencedValues.map(reindexVars).mkString("(", ", ", ")")
+    walkedValues.map(reindexVars)
   }
 
+  def reifyS(lvars: LVar*)(state: State): String =
+    reify(lvars: _*)(state).mkString("(", ", ", ")")
+
   def run_*(f: () => Goal): Stream[String] =
-    pull(fresh(f)(emptyState)).map(reify())
+    pull(fresh(f)(emptyState)).map(reifyS())
 
   def run_*(f: (LVar) => Goal): Stream[String] =
-    pull(fresh(f)(emptyState)).map(reify(LVar(0)))
+    pull(fresh(f)(emptyState)).map(reifyS(LVar(0)))
 
   def run_*(f: (LVar, LVar) => Goal): Stream[String] =
-    pull(fresh(f)(emptyState)).map(reify(LVar(0), LVar(1)))
+    pull(fresh(f)(emptyState)).map(reifyS(LVar(0), LVar(1)))
 
   def run_*(f: (LVar, LVar, LVar) => Goal): Stream[String] =
-    pull(fresh(f)(emptyState)).map(reify(LVar(0), LVar(1), LVar(2)))
+    pull(fresh(f)(emptyState)).map(reifyS(LVar(0), LVar(1), LVar(2)))
 
-  def reifyC[T](lvar: LVar)(state: State): Either[LVar, T] = {
-    def freshIndices(term: Term): Seq[Int] = term match {
-      case LVar(index) => Seq(index)
-      case LCons(h, t) => freshIndices(h) ++ freshIndices(t)
-      case vs: Seq[_] => vs.flatMap(freshIndices)
-      case _ => Seq()
-    }
-
-    val referencedValue = (walk_*(lvar, state.substitution))
-
-    val (newId: Map[Int, Int], _) = freshIndices(referencedValue)
-      .foldLeft[(Map[Int, Int], Int)](Map.empty, 0) {
-      case ((indices, count), lvar) =>
-        if (indices contains lvar) (indices, count)
-        else (indices + (lvar -> count), count + 1)
-    }
-
-    // ideally, reindexVars would preserve type info
-    def reindexVars(term: Term): Term = term match {
-      case LVar(id) => LVar(newId(id))
-      case LCons(h, t) => lcons(reindexVars(h), reindexVars(t))
-      case vs: Seq[_] => vs.map(reindexVars)
-      case x => x
-    }
-
-    reindexVars(referencedValue) match {
+  def reifyC[T](lvar: LVar)(state: State): Either[LVar, T] =
+    reify(lvar)(state).head match {
       case l: LVar => Left(l)
       case t: Term => Right(t.asInstanceOf[T])
     }
-  }
 
   def reifyNestedC[F[_] <: Seq[_],T](lvar: LVar)(state: State): Either[LVar, F[Either[LVar, T]]] = {
-    def freshIndices(term: Term): Seq[Int] = term match {
-      case LVar(index) => Seq(index)
-      case LCons(h, t) => freshIndices(h) ++ freshIndices(t)
-      case vs: Seq[_] => vs.flatMap(freshIndices)
-      case _ => Seq()
-    }
-
-    val referencedValue = (walk_*(lvar, state.substitution))
-
-    val (newId: Map[Int, Int], _) = freshIndices(referencedValue)
-      .foldLeft[(Map[Int, Int], Int)](Map.empty, 0) {
-      case ((indices, count), lvar) =>
-        if (indices contains lvar) (indices, count)
-        else (indices + (lvar -> count), count + 1)
-    }
-
-    // ideally, reindexVars would preserve type info
-    def reindexVars(term: Term): Term = term match {
-      case LVar(id) => LVar(newId(id))
-      case LCons(h, t) => lcons(reindexVars(h), reindexVars(t))
-      case vs: Seq[_] => vs.map(reindexVars)
-      case x => x
-    }
-
     def toEitherLVarT(t: Any): Either[LVar, T] = t match {
         case l: LVar => Left(l)
         case t: Term => Right(t.asInstanceOf[T])
     }
 
-    reindexVars(referencedValue) match {
+    reify(lvar)(state).head match {
       case l: LVar => Left(l)
       case ls: F[_] => Right(
         ls.map(t => toEitherLVarT(t))

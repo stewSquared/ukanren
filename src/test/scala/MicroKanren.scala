@@ -183,7 +183,7 @@ object MicroKanrenSuite extends TestSuite {
     "string reification"-{
       val Seq(q, r, s) = (0 to 2) map LVar
 
-      assert(reify(q, r, s)(
+      assert(reifyS(q, r, s)(
         State(Map(q -> 1, s -> 2, r -> 0), 3)
       ) == "(1, 0, 2)")
 
