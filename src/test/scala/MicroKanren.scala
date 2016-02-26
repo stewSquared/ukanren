@@ -292,6 +292,29 @@ object MicroKanrenSuite extends TestSuite {
             listB === List("last"),
             appendo(listA, listB, result)))
         ).take(4))
+
+      assert(run_*(q => heado(q, 1 to 10)) == Stream(1))
+
+      assert(run_*(q => rembero(q, List(1, 2), List(1))) == Stream(2))
+      assert(run_*(q => rembero(q, List(1, 2), List(2))) == Stream(1))
+      assert(run_*(q => rembero(2, q, List(1))) == Stream(List(2, 1), List(1, 2)))
+      assert(run_*(q => rembero(1, List(1, 2), q)) == Stream(List(2)))
+      assert(run_*(q => rembero(2, List(1, 2), q)) == Stream(List(1)))
+
+      assert(run_*(q => rembero(3, q, List(1, 2))) ==
+        Stream(List(3, 1, 2), List(1, 3, 2), List(1, 2, 3)))
+
+      assert(run_*(q => membero(3, q)).take(3)
+        == Stream((3::_0), (_0::3::_1), (_0::_1::3::_2)))
+      assert(run_*(q => membero(q, List(1, 2, 3))) == Stream(1, 2, 3))
+      assert(run_*(q => membero(2, List(1, q, 3))) == Stream(2))
+      assert(run_*(q => membero(1, List(1, q, 3))).toSet == Set(1, _0))
+
+      assert(run_*(q => permuto(q, 1 to 4)).toSet
+        == (1 to 4).permutations.toSet)
+
+      assert(run_*(q => permuto(q, List(1))) == Stream(List(1)))
+      assert(run_*(q => permuto(List(1), q)) == Stream(List(1)))
     }
   }
 }

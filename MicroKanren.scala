@@ -181,7 +181,18 @@ trait UserInterface extends Core {self: Reification =>
 
   def conso(head: Term, tail: Term, out: Term): Goal = lcons(head, tail) === out
   
+  def heado(head: Term, all: Term): Goal =
+    fresh(tail => (conso(head, tail, all)))
+
+  def tailo(tail: Term, all: Term): Goal =
+    fresh(head => (conso(head, tail, all)))
+
   def emptyo(l: Term): Goal = l === Nil
+
+  def listo(l: Term): Goal = disj_*(
+    emptyo(l),
+    fresh((h, t) =>
+      conso(h, t, l) &&& listo(t)))
 
   def appendo(a: Term, b: Term, result: Term): Goal = disj_*(
     (emptyo(a) &&& (result === b)),
@@ -189,6 +200,43 @@ trait UserInterface extends Core {self: Reification =>
       conso(h, t, a),
       appendo(t, b, tb),
       conso(h, tb, result))))
+
+  def membero(elem: Term, list: Term): Goal =
+    fresh((head, tail) => conj_*(
+      conso(head, tail, list),
+      (elem === head) ||| membero(elem, tail)))
+
+  def rembero(elem: Term, all: Term, tail: Term): Goal = disj_*(
+    conso(elem, tail, all),
+    fresh((headAll, tailAll, rec) => conj_*(
+      conso(headAll, tailAll, all),
+      conso(headAll, rec, tail),
+      rembero(elem, tailAll, rec))))
+
+  // Can SO if lists are not ground and conj'd with something
+  def permuto(listX: Term, listY: Term): Goal =
+    sameLengtho(listX, listY) &&& disj_*(
+      emptyo(listX) &&& emptyo(listY),
+      fresh((x, xs, ys) => conj_*(
+        conso(x, xs, listX),
+        rembero(x, listY, ys),
+        permuto(xs, ys))))
+
+  def sameLengtho(xlist: Term, ylist: Term): Goal = disj_*(
+    emptyo(xlist) &&& emptyo(ylist),
+    fresh((xtail, ytail) => conj_*(
+      tailo(xtail, xlist),
+      tailo(ytail, ylist),
+      sameLengtho(xtail, ytail))))
+
+  def samePoso(xlist: Term, ylist: Term, x: Term, y: Term): Goal = conj_*(
+    disj_*(
+      heado(x, xlist) &&& heado(y, ylist),
+      fresh((xtail, ytail) => conj_*(
+        tailo(xtail, xlist),
+        tailo(ytail, ylist),
+        samePoso(xtail, ytail, x, y))))
+  )
 }
 
 trait Reification extends UserInterface
