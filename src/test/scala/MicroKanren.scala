@@ -132,6 +132,42 @@ object MicroKanrenCoreSuite extends TestSuite with Core {
 
 object MicroKanrenSuite extends TestSuite {
   val tests = TestSuite {
+    "string reification"-{
+      import ukanrenString._
+
+      val Seq(q, r, s) = (0 to 2) map LVar
+
+      assert(reifyS(q, r, s)(
+        State(Map(q -> 1, s -> 2, r -> 0), 3)
+      ) == "(1, 0, 2)")
+
+      assert(run_*(q => succeed) == Stream("(_0)"))
+      assert(run_*((q, r) => succeed) == Stream("(_0, _1)"))
+      assert(run_*((q, r) => q === r) == Stream("(_0, _0)"))
+      assert(run_*((q, r) => r === q) == Stream("(_0, _0)"))
+      assert(run_*((q, r, s) => q === r) == Stream("(_0, _0, _1)"))
+      assert(run_*((q, r, s) => q === s) == Stream("(_0, _1, _0)"))
+      assert(run_*((q, r, s) => r === s) == Stream("(_0, _1, _1)"))
+
+      assert(Stream("(List(_0, _1))") ==
+        run_*(q => fresh((x, y) => (q === List(x, y)))))
+
+      assert(Stream("(_0, List(_1, _2), _3)") ==
+        run_*((l, q, r) => fresh((w, x, y) => (q === List(x, y)))))
+
+      assert(Stream("(List(0), 0)") ==
+        run_*((q, r) => (q === List(r)) &&& (q === List(0))))
+
+      assert(Stream("(List(_0, _1, _2), _1)") ==
+        run_*((q, r) => fresh((x, y, z) => q === List(z, r, x))))
+
+      assert(Stream("(List(_0, _1), _2)") ==
+        run_*((q, r) => fresh((x, y, z) => q === List(y, z))))
+
+      assert(Stream("(_0, List(_1, _2))") ==
+        run_*((q, r) => fresh((x, y, z) => r === List(y, z))))
+    }
+
     "concrete reification"-{
       import ukanrenConcrete._
 
@@ -165,7 +201,7 @@ object MicroKanrenSuite extends TestSuite {
         List(State(Map(LVar(0) -> 3, LVar(1) -> 4, LVar(2) -> 3),3)))
 
       def threes(x: LVar): Goal = disj_*(threes(x), (x === 3), threes(x))
-      assert(run_*(threes _).take(3) == Stream("(3)", "(3)", "(3)"))
+      assert(run_*(threes _).take(3) == Stream(3, 3, 3))
 
       def notThrees(x: LVar): Goal = conj_*((x === 3), (x === 4), notThrees(x))
       assert(run_*(notThrees _).isEmpty)
@@ -200,91 +236,62 @@ object MicroKanrenSuite extends TestSuite {
       )
     }
 
-    "string reification"-{
-      val Seq(q, r, s) = (0 to 2) map LVar
-
-      assert(reifyS(q, r, s)(
-        State(Map(q -> 1, s -> 2, r -> 0), 3)
-      ) == "(1, 0, 2)")
-
-      assert(run_*(q => succeed) == Stream("(_0)"))
-      assert(run_*((q, r) => succeed) == Stream("(_0, _1)"))
-      assert(run_*((q, r) => q === r) == Stream("(_0, _0)"))
-      assert(run_*((q, r) => r === q) == Stream("(_0, _0)"))
-      assert(run_*((q, r, s) => q === r) == Stream("(_0, _0, _1)"))
-      assert(run_*((q, r, s) => q === s) == Stream("(_0, _1, _0)"))
-      assert(run_*((q, r, s) => r === s) == Stream("(_0, _1, _1)"))
-
-      assert(Stream("(List(_0, _1))") ==
-        run_*(q => fresh((x, y) => (q === List(x, y)))))
-
-      assert(Stream("(_0, List(_1, _2), _3)") ==
-        run_*((l, q, r) => fresh((w, x, y) => (q === List(x, y)))))
-
-      assert(Stream("(List(0), 0)") ==
-        run_*((q, r) => (q === List(r)) &&& (q === List(0))))
-
-      assert(Stream("(List(_0, _1, _2), _1)") ==
-        run_*((q, r) => fresh((x, y, z) => q === List(z, r, x))))
-
-      assert(Stream("(List(_0, _1), _2)") ==
-        run_*((q, r) => fresh((x, y, z) => q === List(y, z))))
-
-      assert(Stream("(_0, List(_1, _2))") ==
-        run_*((q, r) => fresh((x, y, z) => r === List(y, z))))
-    }
-
     "run_* interface"-{
       assert(run_*(() => fail) == Stream())
-      assert(run_*(() => succeed) == Stream("()"))
-      assert(run_*((q, r, s) => (r === s)) == Stream("(_0, _1, _1)"))
+      assert(run_*(() => succeed) == Stream((): Unit))
+      assert(run_*((q, r, s) => (r === s)) == Stream((_0, _1, _1)))
     }
 
     "syntax examples"-{
       def teacup(x: LVar) =
         ('tea === x) ||| ('cup === x)
 
-      assert(run_*(x => teacup(x)) == Stream("('tea)", "('cup)"))
+      assert(run_*(x => teacup(x)) == Stream(('tea), ('cup)))
     }
 
     "lcons"-{
-      assert(Stream("(_0)") ==
+      assert(Stream((_0)) ==
         run_*(q => conso(0, List(1, 2, 3), List(0, 1, 2, 3))))
 
-      assert(Stream("(0, 1, 2)") ==
+      assert(Stream((0, 1, 2)) ==
         run_*((q, r, s) => conso(q, List(r, 2, 3), List(0, 1, s, 3))))
 
-      assert(Stream("(List(1, 2, 3))") ==
+      assert(Stream(List(1, 2, 3)) ==
         run_*(q => conso(0, q, List(0, 1, 2, 3))))
 
-      assert(Stream("(List(0, 1, 2, 3))") ==
+      assert(Stream(List(0, 1, 2, 3)) ==
         run_*(q => conso(0, List(1, 2, 3), q)))
 
-      assert(run_*((q, r) => conso(0, q, r)) == Stream("(_0, 0::_0)"))
-      assert(run_*((q, r) => conso(q, List(1), r)) == Stream("(_0, List(_0, 1))"))
-      assert(run_*((q, r) => conso(q, r, List(1))) == Stream("(1, List())"))
-      assert(run_*(conso _) == Stream("(_0, _1, _0::_1)"))
+      assert(run_*((q, r) => conso(0, q, r)) == Stream((_0, 0::_0)))
+      assert(run_*((q, r) => conso(q, List(1), r)) == Stream((_0, List(_0, 1))))
+      assert(run_*((q, r) => conso(q, r, List(1))) == Stream((1, List())))
+      assert(run_*(conso _) == Stream((_0, _1, _0::_1)))
 
-      assert(Stream("(_0::_1::_2)") ==
+      assert(Stream((_0::_1::_2)) ==
         run_*(out =>
           fresh((q, r, s) =>
             fresh(l =>
-              conso(r, s, l) &&& conso(q, l, out)))).force)
+              conso(r, s, l) &&& conso(q, l, out)))))
 
-      assert(Stream("(_0, _1, _0::_1)") ==
+      assert(Stream((_0, _1, _0::_1)) ==
         run_*((a, d, l) =>
           fresh((a2, d2) =>
-            conso(a, d, l) &&& conso(a2, d2, l))).force)
+            conso(a, d, l) &&& conso(a2, d2, l))))
     }
       
     "other list operations"-{
-      assert("Stream((List(first, last)), (List(first, _0, last)), (List(first, _0, _1, last)))" ==
+      assert(Stream(
+        (List("first", "last")),
+        (List("first", _0, "last")),
+        (List("first", _0, _1, "last")),
+        (List("first", _0, _1, _2, "last"))
+      ) ==
         run_*(result  =>
           fresh((listA, listB, tailA) => conj_*(
             conso("first", tailA, listA),
             listB === List("last"),
             appendo(listA, listB, result)))
-        ).take(3).force.toString)
+        ).take(4))
     }
   }
 }

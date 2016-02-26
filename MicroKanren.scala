@@ -16,7 +16,9 @@ trait Core {
   case class ImmatureStream[+T](proc: () => $tream[T]) extends $tream[T]
   case object $Nil extends $tream[Nothing]
 
-  sealed trait LList
+  sealed trait LList {
+    def ::(h: Term) = LCons(h, this)
+  }
 
   case class LCons(head: Term, tail: LList) extends LList {
     override def toString = head+"::"+tail
@@ -237,5 +239,37 @@ trait ConcreteReification extends Reification {
     pull(fresh(f)(emptyState)).map(reifyCNested[F, T](LVar(0)))
 }
 
-object ukanren extends Core with StringReification
+trait DynamicReification extends Reification {
+  val Seq(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9) = 0 to 9 map LVar
+
+  def reifyD()(state: State): Unit = ()
+
+  def reifyD(q: LVar)(state: State): Term =
+    reify(q)(state).head
+
+  def reifyD(q: LVar, r: LVar)(state: State): (Term, Term) =
+    reify(q, r)(state) match {
+      case Seq(a, b) => (a, b)
+    }
+
+  def reifyD(q: LVar, r: LVar, s: LVar)(state: State): (Term, Term, Term) =
+    reify(q, r, s)(state) match {
+      case Seq(a, b, c) => (a, b, c)
+    }
+
+  def run_*(f: () => Goal): Stream[Term] =
+    pull(fresh(f)(emptyState)).map(reifyD())
+
+  def run_*(f: (LVar) => Goal): Stream[Term] =
+    pull(fresh(f)(emptyState)).map(reifyD(LVar(0)))
+
+  def run_*(f: (LVar, LVar) => Goal): Stream[Term] =
+    pull(fresh(f)(emptyState)).map(reifyD(LVar(0), LVar(1)))
+
+  def run_*(f: (LVar, LVar, LVar) => Goal): Stream[Term] =
+    pull(fresh(f)(emptyState)).map(reifyD(LVar(0), LVar(1), LVar(2)))
+}
+
+object ukanrenString extends Core with StringReification
 object ukanrenConcrete extends Core with ConcreteReification
+object ukanren extends Core with DynamicReification
