@@ -110,7 +110,7 @@ trait Core {
   }
 }
 
-trait Interface extends Core {
+trait UserInterface extends Core {self: Reification =>
   implicit class ByName[T](value: => T) {
     def apply(): T = value
   }
@@ -147,7 +147,7 @@ trait Interface extends Core {
       callFresh(r =>
         callFresh(s => f(q,r,s))))
 
-  def reify(lvars: LVar*)(state: State): Seq[Term] = {
+  protected def reify(lvars: LVar*)(state: State): Seq[Term] = {
     def uniqueInOrder[T](items: Seq[T]): Seq[T] = items
       .zipWithIndex
       .groupBy(_._1)
@@ -177,6 +177,21 @@ trait Interface extends Core {
     walkedValues.map(reindexVars)
   }
 
+  def conso(head: Term, tail: Term, out: Term): Goal = lcons(head, tail) === out
+  
+  def emptyo(l: Term): Goal = l === Nil
+
+  def appendo(a: Term, b: Term, result: Term): Goal = disj_*(
+    (emptyo(a) &&& (result === b)),
+    fresh((h, t, tb) => conj_*(
+      conso(h, t, a),
+      appendo(t, b, tb),
+      conso(h, tb, result))))
+}
+
+trait Reification extends UserInterface
+
+trait StringReification extends Reification {
   def reifyS(lvars: LVar*)(state: State): String =
     reify(lvars: _*)(state).mkString("(", ", ", ")")
 
@@ -191,14 +206,16 @@ trait Interface extends Core {
 
   def run_*(f: (LVar, LVar, LVar) => Goal): Stream[String] =
     pull(fresh(f)(emptyState)).map(reifyS(LVar(0), LVar(1), LVar(2)))
+}
 
+trait ConcreteReification extends Reification {
   def reifyC[T](lvar: LVar)(state: State): Either[LVar, T] =
     reify(lvar)(state).head match {
       case l: LVar => Left(l)
       case t: Term => Right(t.asInstanceOf[T])
     }
 
-  def reifyNestedC[F[_] <: Seq[_],T](lvar: LVar)(state: State): Either[LVar, F[Either[LVar, T]]] = {
+  def reifyCNested[F[_] <: Seq[_],T](lvar: LVar)(state: State): Either[LVar, F[Either[LVar, T]]] = {
     def toEitherLVarT(t: Any): Either[LVar, T] = t match {
         case l: LVar => Left(l)
         case t: Term => Right(t.asInstanceOf[T])
@@ -212,23 +229,13 @@ trait Interface extends Core {
     }
   }
 
-  def runC[T](f: (LVar) => Goal): Stream[Either[LVar, T]] =
+  def run_*[T](f: (LVar) => Goal): Stream[Either[LVar, T]] =
     pull(fresh(f)(emptyState)).map(reifyC[T](LVar(0)))
 
-  def runC[F[_] <: Seq[_], T](f: (LVar) => Goal)(implicit d: DummyImplicit)
+  def run_*[F[_] <: Seq[_], T](f: (LVar) => Goal)(implicit d: DummyImplicit)
       : Stream[Either[LVar, F[Either[LVar, T]]]] =
-    pull(fresh(f)(emptyState)).map(reifyNestedC[F, T](LVar(0)))
-
-  def conso(head: Term, tail: Term, out: Term): Goal = lcons(head, tail) === out
-  
-  def emptyo(l: Term): Goal = l === Nil
-
-  def appendo(a: Term, b: Term, result: Term): Goal = disj_*(
-    (emptyo(a) &&& (result === b)),
-    fresh((h, t, tb) => conj_*(
-      conso(h, t, a),
-      appendo(t, b, tb),
-      conso(h, tb, result))))
+    pull(fresh(f)(emptyState)).map(reifyCNested[F, T](LVar(0)))
 }
 
-object ukanren extends Interface with Core
+object ukanren extends Core with StringReification
+object ukanrenConcrete extends Core with ConcreteReification

@@ -132,6 +132,26 @@ object MicroKanrenCoreSuite extends TestSuite with Core {
 
 object MicroKanrenSuite extends TestSuite {
   val tests = TestSuite {
+    "concrete reification"-{
+      import ukanrenConcrete._
+
+      assert(run_*[Int](q => q === 4) ==
+        Stream[Either[LVar, Int]](Right(4)))
+
+      assert(run_*[Int](q => succeed) ==
+        Stream[Either[LVar, Int]](Left(LVar(0))))
+
+      assert(run_*[List[Int]](q => q === List(4)) ==
+        Stream[Either[LVar, List[Int]]](Right(List(4))))
+
+      assert(run_*[List, Int](q => q === List(4)) ==
+        Stream[Either[LVar, List[Either[LVar, Int]]]](Right(List(Right(4)))))
+
+      assert(run_*[List, Int](q => fresh(r => q === List(1, r, 3))) ==
+        Stream[Either[LVar, List[Either[LVar, Int]]]](
+          Right(List(Right(1), Left(LVar(0)), Right(3)))))
+    }
+
     import ukanren._
 
     "variadic conj/disj"-{
@@ -212,24 +232,6 @@ object MicroKanrenSuite extends TestSuite {
 
       assert(Stream("(_0, List(_1, _2))") ==
         run_*((q, r) => fresh((x, y, z) => r === List(y, z))))
-    }
-
-    "concrete reification"-{
-      assert(runC[Int](q => q === 4) ==
-        Stream[Either[LVar, Int]](Right(4)))
-
-      assert(runC[Int](q => succeed) ==
-        Stream[Either[LVar, Int]](Left(LVar(0))))
-
-      assert(runC[List[Int]](q => q === List(4)) ==
-        Stream[Either[LVar, List[Int]]](Right(List(4))))
-
-      assert(runC[List, Int](q => q === List(4)) ==
-        Stream[Either[LVar, List[Either[LVar, Int]]]](Right(List(Right(4)))))
-
-      assert(runC[List, Int](q => fresh(r => q === List(1, r, 3))) ==
-        Stream[Either[LVar, List[Either[LVar, Int]]]](
-          Right(List(Right(1), Left(LVar(0)), Right(3)))))
     }
 
     "run_* interface"-{
