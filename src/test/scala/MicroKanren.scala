@@ -203,6 +203,15 @@ object MicroKanrenSuite extends TestSuite {
 
       assert(Stream("(List(0), 0)") ==
         run_*((q, r) => (q === List(r)) &&& (q === List(0))))
+
+      assert(Stream("(List(_0, _1, _2), _1)") ==
+        run_*((q, r) => fresh((x, y, z) => q === List(z, r, x))))
+
+      assert(Stream("(List(_0, _1), _2)") ==
+        run_*((q, r) => fresh((x, y, z) => q === List(y, z))))
+
+      assert(Stream("(_0, List(_1, _2))") ==
+        run_*((q, r) => fresh((x, y, z) => r === List(y, z))))
     }
 
     "concrete reification"-{
