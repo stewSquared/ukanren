@@ -1,20 +1,12 @@
 /**
   * From the paper by Jason Hemann
-  *  
-  * I've tried to stay true to the names in the original, sometimes
-  * being more explicit or tweaking to avoid naming clashes.
-  * TODO: Rename everything to avoid `$` symbol.
-  *
-  * Departures from the paper:
-  * A substitution is represented by a Map rather than an association list.
-  *
   */
 
 trait Core {
-  sealed trait $tream[+T]
-  case class $Cons[+T](head: T, tail: $tream[T]) extends $tream[T]
-  case class ImmatureStream[+T](proc: () => $tream[T]) extends $tream[T]
-  case object $Nil extends $tream[Nothing]
+  sealed trait StateStream
+  case class StateCons(head: State, tail: StateStream) extends StateStream
+  case class ImmatureStates[+T](proc: () => StateStream) extends StateStream
+  case object StatesNil extends StateStream
 
   sealed trait LList {
     def ::(h: Term) = LCons(h, this)
@@ -36,7 +28,7 @@ trait Core {
   type Term = Any
   type Substitution = Map[LVar, Term]
   case class State(substitution: Substitution, counter: Int)
-  type Goal = State => $tream[State]
+  type Goal = State => StateStream
 
   val succeed: Goal = state => unit(state)
   val fail: Goal = state => mzero
@@ -46,8 +38,8 @@ trait Core {
     case State(s,c) => f(LVar(c))(State(s, c+1))
   }
 
-  def unit(state: State): $tream[State] = $Cons(state, $Nil)
-  val mzero: $tream[State] = $Nil
+  def unit(state: State): StateStream = StateCons(state, StatesNil)
+  val mzero: StateStream = StatesNil
 
   def unify(u: Term, v: Term): Goal = { case State(s, c) =>
     unify(u, v, s).map(newSub => unit(State(newSub, c))).getOrElse(mzero)
@@ -85,30 +77,30 @@ trait Core {
 
   protected def disj(g1: => Goal, g2: => Goal): Goal = state => mplus(g1(state), g2(state))
 
-  def mplus($1: $tream[State], $2: $tream[State]): $tream[State] = $1 match {
-    case $Nil => $2
-    case ImmatureStream(imm) => immature(mplus($2, imm()))
-    case $Cons(h, t) => $Cons(h, mplus($2, t))
+  def mplus(s1: StateStream, s2: StateStream): StateStream = s1 match {
+    case StatesNil => s2
+    case ImmatureStates(imm) => immature(mplus(s2, imm()))
+    case StateCons(h, t) => StateCons(h, mplus(s2, t))
   }
 
   protected def conj(g1: => Goal, g2: => Goal): Goal = state => bind(g1(state), g2)
 
-  def bind($: $tream[State], g: Goal): $tream[State] = $ match {
-    case $Nil => mzero
-    case ImmatureStream(imm) => immature(bind(imm(), g))
-    case $Cons(h, t) => mplus(g(h), bind(t, g))
+  def bind(s: StateStream, g: Goal): StateStream = s match {
+    case StatesNil => mzero
+    case ImmatureStates(imm) => immature(bind(imm(), g))
+    case StateCons(h, t) => mplus(g(h), bind(t, g))
   }
 
-  protected def immature[T]($: => $tream[T]) = ImmatureStream(() => $)
+  protected def immature(s: => StateStream) = ImmatureStates(() => s)
 
   // Inverse eta delay. Pronounced "Snooze"
   // TODO? Use the type system to decide when to do this implicitly
-  protected def Zzz(g: Goal): State => ImmatureStream[State] = state => immature(g(state))
+  protected def Zzz(g: Goal): State => ImmatureStates[State] = state => immature(g(state))
 
-  def pull[T]($: $tream[T]): Stream[T] = $ match {
-    case $Nil => Stream.empty
-    case ImmatureStream(imm) => pull(imm())
-    case $Cons(h, t) => h #:: pull(t)
+  def pull(s: StateStream): Stream[State] = s match {
+    case StatesNil => Stream.empty
+    case ImmatureStates(imm) => pull(imm())
+    case StateCons(h, t) => h #:: pull(t)
   }
 }
 

@@ -16,7 +16,7 @@ object MicroKanrenCoreSuite extends TestSuite with Core {
     "example ukanren queries from Hemann Paper"-{
       assert(
         callFresh(q => unify(q, 5))(emptyState) ==
-          $Cons(State(Map(LVar(0) -> 5), 1), $Nil))
+          StateCons(State(Map(LVar(0) -> 5), 1), StatesNil))
 
       def ab: Goal = conj(
         callFresh(a => unify(a,7)),
@@ -25,8 +25,8 @@ object MicroKanrenCoreSuite extends TestSuite with Core {
           unify(b,6))))
 
       assert(ab(emptyState) ==
-        $Cons(State(Map(LVar(0) -> 7, LVar(1) -> 5), 2),
-          $Cons(State(Map(LVar(0) -> 7, LVar(1) -> 6), 2), $Nil)))
+        StateCons(State(Map(LVar(0) -> 7, LVar(1) -> 5), 2),
+          StateCons(State(Map(LVar(0) -> 7, LVar(1) -> 6), 2), StatesNil)))
     }
 
     "Infinite streams"-{
@@ -36,9 +36,9 @@ object MicroKanrenCoreSuite extends TestSuite with Core {
       def fivesAndSixes = callFresh(x => disj(fives(x), sixes(x)))
 
       "Infinite disj"-{
-        val $Cons(fst, ImmatureStream(imm0)) = callFresh(fives)(emptyState)
-        val $Cons(snd, ImmatureStream(imm1)) = imm0()
-        val $Cons(trd, ImmatureStream(imm2)) = imm1()
+        val StateCons(fst, ImmatureStates(imm0)) = callFresh(fives)(emptyState)
+        val StateCons(snd, ImmatureStates(imm1)) = imm0()
+        val StateCons(trd, ImmatureStates(imm2)) = imm1()
         assert(fst == snd)
         assert(snd == trd)
 
