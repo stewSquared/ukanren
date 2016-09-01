@@ -48,8 +48,32 @@ trait Core {
   def unit(state: State): StateStream = StateCons(state, StatesNil)
   val mzero: StateStream = StatesNil
 
-  def unify(u: Term, v: Term): Goal = { case State(s, c, _) =>
-    unify(u, v, s).map(newSub => unit(State(newSub, c, ???))).getOrElse(mzero)
+  def unify(u: Term, v: Term): Goal = {
+    case state@State(subst, count, constraints) =>
+      unify(u, v, subst) match {
+        case None => mzero
+        case Some(`subst`) => unit(state)
+        case Some(newSubst) =>
+          verifyConstraints(newSubst, constraints)
+            .map(newConsts => unit(State(newSubst, count, newConsts)))
+            .getOrElse(mzero)
+      }
+  }
+
+  protected def verifyConstraints(newSubst: Substitution, constraints: ConstraintStore) : Option[ConstraintStore] = {
+    def unifyAll(c: Constraint) = c.foldLeft(Option(newSubst)) {
+      case (s, (u, v)) => s.flatMap(unify(u, v, _))
+    }
+    def verify(newConst: Constraint, verified: ConstraintStore): Option[ConstraintStore] =
+      unifyAll(newConst) match {
+        case None => Some(verified) // Constraint can be ignored.
+        case Some(`newSubst`) => None // Constraint was violated.
+        case Some(ext) => Some(newPairs(ext, newSubst) :: verified)
+      }
+    // Build a new constraint store
+    constraints.foldLeft[Option[ConstraintStore]](Some(Nil))(
+      (csOpt, unverified: Constraint) => csOpt.flatMap(verify(unverified, _))
+    )
   }
 
   protected def unify(u: Term, v: Term, s: Substitution): Option[Substitution] =
