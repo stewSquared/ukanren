@@ -27,22 +27,29 @@ trait Core {
 
   type Term = Any
   type Substitution = Map[LVar, Term]
-  case class State(substitution: Substitution, counter: Int)
+  //type Constraint = List[(LVar, Term)]
+  type Constraint = Substitution
+  type ConstraintStore = List[Constraint]
+  case class State(
+    substitution: Substitution,
+    counter: Int,
+    constraints: ConstraintStore)
   type Goal = State => StateStream
 
   val succeed: Goal = state => unit(state)
   val fail: Goal = state => mzero
-  val emptyState = State(Map.empty, 0)
+  val emptyState = State(Map.empty, 0, List.empty)
 
   protected def callFresh(f: LVar => Goal): Goal = {
-    case State(s,c) => f(LVar(c))(State(s, c+1))
+    case State(subst, count, constraints) =>
+      f(LVar(count))(State(subst, count+1, constraints))
   }
 
   def unit(state: State): StateStream = StateCons(state, StatesNil)
   val mzero: StateStream = StatesNil
 
-  def unify(u: Term, v: Term): Goal = { case State(s, c) =>
-    unify(u, v, s).map(newSub => unit(State(newSub, c))).getOrElse(mzero)
+  def unify(u: Term, v: Term): Goal = { case State(s, c, _) =>
+    unify(u, v, s).map(newSub => unit(State(newSub, c, ???))).getOrElse(mzero)
   }
 
   protected def unify(u: Term, v: Term, s: Substitution): Option[Substitution] =
