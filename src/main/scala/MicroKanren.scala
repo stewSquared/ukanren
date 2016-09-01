@@ -68,6 +68,19 @@ trait Core {
       case _ => None
     }
 
+  def disunify(u: Term, v: Term): Goal = {
+    case state@State(subst, count, constraints) =>
+      unify(u, v, subst) match {
+        case None => unit(state) // Can't unify. Ignore constraint.
+        case Some(`subst`) => mzero // Constraint already violated.
+        case Some(ext) => // Simplify the constraint with newPairs.
+          unit(State(subst, count, newPairs(ext, subst) :: constraints))
+      }
+  }
+
+  protected def newPairs(extended: Substitution, original: Substitution): Constraint =
+    (original.toList diff extended.toList).toMap
+
   def walk(u: Term, s: Substitution): Term = u match {
     case v: LVar => s.get(v).fold(u)(walk(_, s))
     case _ => u
