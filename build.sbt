@@ -1,4 +1,10 @@
-scalaVersion := "2.11.7"
+scalaVersion := "2.11.8"
+
+organization := "com.stewsquared"
+
+name := "ukanren"
+
+version := "0.1-SNAPSHOT"
 
 libraryDependencies += "com.lihaoyi" %% "utest" % "0.3.1"
 
