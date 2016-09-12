@@ -155,6 +155,8 @@ trait UserInterface extends Core {self: Reification =>
 
   implicit class TermOps(t: Term) {
     def ===(t2: Term): Goal = unify(t, t2)
+    def =!=(t2: Term): Goal = disunify(t, t2)
+    def =/=(t2: Term): Goal = disunify(t, t2)
   }
 
   implicit class GoalOps(g: Goal) {
