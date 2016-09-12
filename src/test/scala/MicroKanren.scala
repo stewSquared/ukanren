@@ -357,6 +357,7 @@ object MicroKanrenSuite extends TestSuite {
 
       assert(run(q => rembero(q, List(1, 2), List(1))) == Stream(2))
       assert(run(q => rembero(q, List(1, 2), List(2))) == Stream(1))
+      assert(run(q => rembero(2, List(1), q)) == Stream.empty)
       assert(run(q => rembero(2, q, List(1))) == Stream(List(2, 1), List(1, 2)))
       assert(run(q => rembero(1, List(1, 2), q)) == Stream(List(2)))
       assert(run(q => rembero(2, List(1, 2), q)) == Stream(List(1)))

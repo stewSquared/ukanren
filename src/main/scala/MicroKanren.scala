@@ -239,12 +239,14 @@ trait ListRelations extends UserInterface { self: Reification =>
       conso(head, tail, list),
       (elem === head) || membero(elem, tail)))
 
-  def rembero(elem: Term, list: Term, rest: Term): Goal = any(
-    conso(elem, rest, list),
-    exists((h, t, recur) => all(
-      conso(h, t, list),
-      conso(h, recur, rest),
-      rembero(elem, t, recur))))
+  def rembero(elem: Term, list: Term, rest: Term): Goal =
+    exists((h, t) => conso(h, t, list) &&
+      any(
+        (h === elem) && (t === rest),
+        exists(recur => all(
+          (h =/= elem),
+          (h::recur === rest),
+          rembero(elem, t, recur)))))
 
   // Can SO if lists are not ground and conj'd with something
   def permuto(listX: Term, listY: Term): Goal =
