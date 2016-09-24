@@ -1,0 +1,262 @@
+
+| Logic Programming in Scala
+
+| Featuring miniKanren embeded in Scala as DSL
+| by Stewart Stewart, Driver Inc.
+
+---
+
+| What is it?
+
+< Logic Programming is a declarative paradigm where you program by
+< writing rules and constraints.
+
+--
+
+< Use first order logic to encode knowledge.
+
+--
+
+< Specify what you want rather than how to get it.
+
+---
+
+| miniKanren
+
+A relational programming language
+
+< 2005 - "The Reasoned Schemer"
+< Daniel P. Friedman
+< William E. Byrd
+< Oleg Kiselyov
+
+< 2009 - PhD Dissertation William Byrd
+
+--
+
+< Pure relational programming
+
+--
+
+< Easily embeddable
+
+---
+
+| miniKanren Basics
+--
+
+Unification:
+
+```
+val ex1 = run(q => (q === 3))
+ex1 foreach println
+```
+
+--
+
+Disjunction:
+
+```
+val ex2 = run(q => (q === 3) || (q === 4))
+ex2 foreach println
+```
+
+--
+
+Conjunction:
+
+```
+val ex3 = run(q => (q === 3) && (q === 4))
+ex3 foreach println
+```
+
+---
+
+| miniKanren Basics
+--
+
+Failing goal:
+
+```
+val ex4 = run(q => fail)
+ex4 foreach println
+```
+
+--
+
+Succeeding goal:
+
+```
+val ex5 = run(q => succeed)
+ex5 foreach println
+```
+
+--
+
+Reifying multiple logic variables:
+
+```
+val ex6 = run((q, r) => succeed)
+ex6 foreach println
+```
+
+---
+
+| miniKanren Basics
+--
+
+Unifying two unbound logic variables:
+
+```
+val ex7 = run((q, r) => q === r)
+ex7 foreach println
+```
+--
+
+`all`
+
+```
+val ex8 = run((q, r, s) => all((q === 1), (r === 2), (s === 3)))
+ex8 foreach println
+```
+
+--
+
+`any`
+
+```
+val ex9 = run((q, r, s) => any((q === 'Q'), (r === 'R'), (s === 'S')))
+ex9 foreach println
+```
+
+---
+
+| miniKanren Basics
+--
+
+Introducing new logic variables:
+
+```
+val ex10 = run(q => exists((a,b,c) => q == List(a, b, c)))
+ex10 foreach println
+```
+
+--
+
+...and leaving them unbound:
+
+```
+val ex11 = run(q => exists((a,b,c) => succeed))
+ex11 foreach println
+```
+
+---
+
+| Appendo
+
+Append definition (contrived, bear with me):
+
+```
+def append[T](la: List[T], lb: List[T]): List[T] =
+  if (la.isEmpty) lb
+  else {
+    val a::as = la
+    val rec = append(as, lb)
+    a::rec
+  }
+
+val start = (1 to 5).toList
+val end = (6 to 10).toList
+val full = (1 to 10).toList
+```
+--
+```
+append(start, end) foreach println
+```
+---
+
+| Appendo
+
+```
+run(appendo(start, end, _)) foreach println
+```
+--
+
+```
+run(appendo(_, _, full)) foreach println
+```
+--
+
+```
+run(q =>
+  exists(appendo(start, _, q)) && exists(appendo(_, end, q))
+) take 10 foreach println
+```
+
+---
+
+| Demo - Yachts
+
+Mary Ann Moore's father has a yacht and so has each of his four
+friends: Colonel Downing, Mr. Hall, Sir Barnacle Hood, and
+Dr. Parker. Each of the five also has one daughter and each has named
+his yacht after a daughter of one of the others. Sir Barnacle's yacht
+is the Gabrielle, Mr. Moore owns the Lorna; Mr. Hall the Rosalind. The
+Melissa, owned by Colonel Downing, is named after Sir Barnacle's
+daughter. Gabrielle's father owns the yacht that is named after
+Dr. Parker's daughter. Who is Lorna's father?
+
+
+---
+
+| Demo - Liars
+
+---
+
+| Next Steps
+
+More Constrainst -- finite domains
+
+Nominal Logic Programming
+
+Macros
+
+Types
+
+---
+
+| Resources
+
+The Reasoned Schemer
+
+microKanren - Jason Hemann, Daniel P. Friedman
+
+miniKanren PhD dissertation - William Byrd
+
+"There's a Prolog in your Scala"
+
+David Nolen - core.logic 
+
+Nada Amin - scalogno
+
+---
+
+| Tools used
+
+REPLesent
+
+ENSIME + emacs
+
+---
+
+| Thank You!
+
+--
+
+| Questions?
+
+
+
+@stewinsalot
+stewSquared@driver.xyz
+github.com/stewSquared/ukanren
