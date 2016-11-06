@@ -29,6 +29,22 @@ object MicroKanrenCoreSuite extends TestSuite with Core {
           StateCons(State(Map(LVar(0) -> 7, LVar(1) -> 6), 2, List.empty[Constraint]), StatesNil)))
     }
 
+    "basic disunification examples"-{
+
+      "simultaneous unify and disunify should fail"-{
+        val fiveNotFive = callFresh(q => conj(unify(5, q), disunify(5, q)))
+        val sixNotSix = callFresh(q => conj(disunify(6, q), unify(6, q)))
+
+        val fiveNotSix = callFresh(q => conj(unify(5, q), disunify(q, 6)))
+        val five = callFresh(q => unify(5, q))
+
+        assert(fiveNotFive(emptyState) == StatesNil)
+        assert(sixNotSix(emptyState) == StatesNil)
+        assert(fiveNotSix(emptyState) == five(emptyState))
+      }
+
+    }
+
     "Infinite streams"-{
       def fives(x: LVar): Goal = disj(unify(x, 5), Zzz(fives(x)))
       def fivesLeft(x: LVar): Goal = disj(Zzz(fivesLeft(x)), unify(x, 5))
