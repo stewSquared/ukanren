@@ -43,12 +43,49 @@ object MicroKanrenCoreSuite extends TestSuite with Core {
         assert(fiveNotSix(emptyState) == five(emptyState))
       }
 
-      "disunify should add to constraint store"-{
+      "add to constraint store"-{
         val notFive = callFresh(disunify(5, _))
 
-        assert(
-          notFive(emptyState) ==
-            StateCons(State(Map.empty, 1, List(Map(LVar(0) -> 5))), StatesNil))
+        assert(notFive(emptyState) ==
+          StateCons(State(Map.empty, 1, List(Map(LVar(0) -> 5))), StatesNil))
+
+        val notFiveNotSix =
+          callFresh(q =>
+            callFresh(r =>
+              callFresh(s =>
+                conj(
+                  disunify(5, q),
+                  conj(
+                    disunify(5, r),
+                    disunify(6, r))))))
+
+        assert(pull(notFiveNotSix(emptyState)).head.constraints.toSet ==
+          Set(
+            Map(LVar(0) -> 5),
+            Map(LVar(1) -> 5),
+            Map(LVar(1) -> 6)))
+      }
+
+      "constraint not listed if impossible to violate"-{
+        val isFiveNotSix = callFresh(q =>
+          conj(
+            unify(5, q),
+            disunify(6, q)))
+
+        val notSixIsFive = callFresh(q =>
+          conj(
+            disunify(6, q),
+            unify(5, q)))
+
+        assert(isFiveNotSix(emptyState) == notSixIsFive(emptyState))
+
+        assert(isFiveNotSix(emptyState) ==
+          StateCons(
+            State(
+              Map(LVar(0) -> 5),
+              1,
+              List.empty[Constraint]),
+            StatesNil))
       }
     }
 
