@@ -16,7 +16,7 @@ object MicroKanrenCoreSuite extends TestSuite with Core {
     "example ukanren queries from Hemann Paper"-{
       assert(
         callFresh(q => unify(q, 5))(emptyState) ==
-          StateCons(State(Map(LVar(0) -> 5), 1), StatesNil))
+          StateCons(State(Map(LVar(0) -> 5), 1, List.empty[Constraint]), StatesNil))
 
       def ab: Goal = conj(
         callFresh(a => unify(a,7)),
@@ -25,8 +25,8 @@ object MicroKanrenCoreSuite extends TestSuite with Core {
           unify(b,6))))
 
       assert(ab(emptyState) ==
-        StateCons(State(Map(LVar(0) -> 7, LVar(1) -> 5), 2),
-          StateCons(State(Map(LVar(0) -> 7, LVar(1) -> 6), 2), StatesNil)))
+        StateCons(State(Map(LVar(0) -> 7, LVar(1) -> 5), 2, List.empty[Constraint]),
+          StateCons(State(Map(LVar(0) -> 7, LVar(1) -> 6), 2, List.empty[Constraint]), StatesNil)))
     }
 
     "Infinite streams"-{
@@ -68,7 +68,7 @@ object MicroKanrenCoreSuite extends TestSuite with Core {
     "Unification of atoms"-{
       assert(run(callFresh(_ => unify(1, 1))).nonEmpty)
       assert(run(callFresh(_ => unify(0, 1))).isEmpty)
-      assert(State(Map(_0 -> 1), 1) == run(callFresh(q => unify(q, 1))).head)
+      assert(State(Map(_0 -> 1), 1, List.empty[Constraint]) == run(callFresh(q => unify(q, 1))).head)
       assert(run(callFresh(q => conj(unify(q, 0), unify(q, 1)))).isEmpty)
 
       assert(Map(_0 -> 0, _1 -> 0) ==
@@ -79,14 +79,14 @@ object MicroKanrenCoreSuite extends TestSuite with Core {
     "Unification of lists"-{
       assert(run(callFresh(_ => unify(List(0), List(0, 1)))).isEmpty)
 
-      assert(State(Map(_0 -> 0), 1) ==
+      assert(State(Map(_0 -> 0), 1, List.empty[Constraint]) ==
         run(callFresh(q => unify(List(q, 1), List(0, 1)))).head)
 
-      assert(State(Map(_0 -> 0, _1 -> 1), 2) ==
+      assert(State(Map(_0 -> 0, _1 -> 1), 2, List.empty[Constraint]) ==
         run(callFresh(q =>
           callFresh(r => unify(List(q, 1), List(0, r))))).head)
 
-      assert(State(Map(_0 -> List(0, _1)), 2) ==
+      assert(State(Map(_0 -> List(0, _1)), 2, List.empty[Constraint]) ==
         run(callFresh(q =>
           callFresh(r => unify(q, List(0, r))))).head)
 
@@ -138,7 +138,7 @@ object MicroKanrenSuite extends TestSuite {
       val Seq(q, r, s) = (0 to 2) map LVar
 
       assert(reifyS(q, r, s)(
-        State(Map(q -> 1, s -> 2, r -> 0), 3)
+        State(Map(q -> 1, s -> 2, r -> 0), 3, List.empty[Constraint])
       ) == "(1, 0, 2)")
 
       assert(run(q => succeed) == Stream("(_0)"))
@@ -198,7 +198,7 @@ object MicroKanrenSuite extends TestSuite {
         all((q === 3), (r === 4), (s === q)))
 
       assert(pull(multiconj(emptyState)).toList ==
-        List(State(Map(LVar(0) -> 3, LVar(1) -> 4, LVar(2) -> 3),3)))
+        List(State(Map(LVar(0) -> 3, LVar(1) -> 4, LVar(2) -> 3), 3, List.empty[Constraint])))
 
       def threes(x: LVar): Goal = any(threes(x), (x === 3), threes(x))
       assert(run(threes _).take(3) == Stream(3, 3, 3))
@@ -213,7 +213,7 @@ object MicroKanrenSuite extends TestSuite {
 
       assert(
         pull(g2(emptyState)).toList == List(
-          State(Map(LVar(0) -> 3, LVar(1) -> 4),2)))
+          State(Map(LVar(0) -> 3, LVar(1) -> 4), 2, List.empty[Constraint])))
 
       val g3 = exists((q,r,s) => all(
         (0 === r),
@@ -221,17 +221,17 @@ object MicroKanrenSuite extends TestSuite {
         (s === r)))
 
       assert(pull(g3(emptyState)).toList == List(
-        State(Map(LVar(1) -> 0, LVar(0) -> LVar(2), LVar(2) -> 0),3)))
+        State(Map(LVar(1) -> 0, LVar(0) -> LVar(2), LVar(2) -> 0), 3, List.empty[Constraint])))
     }
 
     "Nested binding"-{
       val (x, y) = (LVar(0), LVar(1))
 
-      assert(State(Map(x -> 1, y -> 3), 2) ==
+      assert(State(Map(x -> 1, y -> 3), 2, List.empty[Constraint]) ==
         pull(exists((x, y) => (List(x, 2, 3) === List(1, 2, y)))(emptyState)).head
       )
 
-      assert(State(Map(x -> (List(1, y, 3))), 2) ==
+      assert(State(Map(x -> (List(1, y, 3))), 2, List.empty[Constraint]) ==
         pull(exists((x, y) => (x === List(1, y, 3)))(emptyState)).head
       )
     }
