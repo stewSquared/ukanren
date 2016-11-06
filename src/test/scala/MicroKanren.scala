@@ -43,6 +43,13 @@ object MicroKanrenCoreSuite extends TestSuite with Core {
         assert(fiveNotSix(emptyState) == five(emptyState))
       }
 
+      "disunify should add to constraint store"-{
+        val notFive = callFresh(disunify(5, _))
+
+        assert(
+          notFive(emptyState) ==
+            StateCons(State(Map.empty, 1, List(Map(LVar(0) -> 5))), StatesNil))
+      }
     }
 
     "Infinite streams"-{

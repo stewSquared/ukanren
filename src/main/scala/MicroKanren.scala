@@ -103,7 +103,7 @@ trait Core {
   }
 
   protected def newPairs(extended: Substitution, original: Substitution): Constraint =
-    (original.toList diff extended.toList).toMap
+    (extended.toList diff original.toList).toMap
 
   def walk(u: Term, s: Substitution): Term = u match {
     case v: LVar => s.get(v).fold(u)(walk(_, s))
