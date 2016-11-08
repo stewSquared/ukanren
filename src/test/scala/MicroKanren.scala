@@ -67,6 +67,10 @@ object MicroKanrenCoreSuite extends TestSuite with Core {
       }
 
       "constraint not listed if impossible to violate"-{
+        val fiveEqualsSix = callFresh(q => disunify(5, 6))
+        val succeeding = callFresh(q => succeed)
+        assert(fiveEqualsSix(emptyState) == succeeding(emptyState))
+
         val isFiveNotSix = callFresh(q =>
           conj(
             unify(5, q),
@@ -294,6 +298,11 @@ object MicroKanrenSuite extends TestSuite {
       assert(State(Map(x -> (List(1, y, 3))), 2, List.empty[Constraint]) ==
         pull(exists((x, y) => (x === List(1, y, 3)))(emptyState)).head
       )
+    }
+
+    "disequality costraint"-{
+      assert(run(() => (5 =/= 6)) == run(() => succeed))
+      assert(run(() => (5 =/= 5)) == run(() => fail))
     }
 
     "run interface"-{
