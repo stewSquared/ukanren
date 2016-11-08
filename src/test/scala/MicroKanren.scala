@@ -91,6 +91,64 @@ object MicroKanrenCoreSuite extends TestSuite with Core {
               List.empty[Constraint]),
             StatesNil))
       }
+
+      "disunifying lists"-{
+
+        val notFiveAndNotSix =
+          callFresh(x => //LVar(0)
+            callFresh(y => //LVar(1)
+              disunify(
+                List(5, 6),
+                List(x, y))))
+
+        // This example demonstrate why `Constraints` is a list of maps
+        assert(pull(notFiveAndNotSix(emptyState)).head.constraints ==
+          List(Map(
+            LVar(0) -> 5,
+            LVar(1) -> 6)))
+
+        val notFiveAndNotSixIndirect =
+          callFresh(x => //LVar(0)
+            callFresh(y => //LVar(1)
+              callFresh(pair =>
+                conj(
+                  disunify(List(5, 6), pair),
+                  unify(List(x, y), pair)))))
+
+        assert(pull(notFiveAndNotSix(emptyState)).head.constraints ==
+          pull(notFiveAndNotSixIndirect(emptyState)).head.constraints)
+
+        val constraintSimplified =
+          callFresh(x =>
+            callFresh(y =>
+              callFresh(pair =>
+                conj(conj(
+                  disunify(List(5,6), pair) ,
+                  unify(List(x, y), pair)),
+                  unify(5, x)))))
+
+        assert(pull(constraintSimplified(emptyState)).head.constraints ==
+          List(Map(
+            // Not absence of `LVar(0) -> 5`
+            LVar(1) -> 6)))
+
+        println(constraintSimplified(emptyState))
+
+        // A "more complicated example" From Byrd 2009 Chapter 8.2
+        val constraintSafeToIgnore =
+          callFresh (x =>
+            callFresh(y =>
+              callFresh(pair =>
+                conj(conj(conj(
+                  disunify(List(5,6), pair) ,
+                  unify(List(x, y), pair)),
+                  unify(5, x)),
+                  unify(7, y)))))
+
+        println(constraintSafeToIgnore(emptyState))
+
+        assert(pull(constraintSafeToIgnore(emptyState)).head.constraints.isEmpty)
+      }
     }
 
     "Infinite streams"-{
