@@ -257,6 +257,22 @@ trait ListRelations extends UserInterface { self: Reification =>
         rembero(x, listY, ys),
         permuto(xs, ys))))
 
+  protected def oneElemento(list: Term): Goal =
+    exists((h, t) => conso(h, t, list) && emptyo(t))
+
+  def distincto(list: Term): Goal = any(
+    emptyo(list),
+    oneElemento(list),
+    exists((first, second, rest, tail) => all(
+      conso(first, tail, list),
+      conso(second, rest, tail),
+      (first =/= second),
+      exists((firstRest, secondRest) => all(
+        conso(first, rest, firstRest),
+        conso(second, rest, secondRest),
+        distincto(firstRest),
+        distincto(secondRest))))))
+
   def sameLengtho(xlist: Term, ylist: Term): Goal = any(
     emptyo(xlist) && emptyo(ylist),
     exists((xtail, ytail) => all(
