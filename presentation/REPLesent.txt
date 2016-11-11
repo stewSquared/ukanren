@@ -10,142 +10,106 @@
 
 < Logic Programming is a declarative paradigm where you program by
 < writing rules and constraints.
-
 --
 
 < Use first order logic to encode knowledge.
 
---
-
 < Specify what you want rather than how to get it.
+
+< The runtime finds solutions satisfying constraints.
 
 ---
 
 | miniKanren
 
-A relational programming language
+A *relational* programming language:
 
-< 2005 - "The Reasoned Schemer"
-< Daniel P. Friedman
-< William E. Byrd
-< Oleg Kiselyov
-
-< 2009 - PhD Dissertation William Byrd
-
+Function:  `add(3, 4): Int`
+Relation:  `add(3, 4, 7): Constraint`
 --
 
-< Pure relational programming
-
+If `3 + a === 7`, what is a?
 --
 
-< Easily embeddable
+< - Appeared in 2005 - "The Reasoned Schemer" by Byrd et al.
 
+< - Embedded in scheme
+
+< - Pure relational programming
 ---
 
 | miniKanren Basics
 
 Unification:
-
 ```
-run(q => (q === 3)).toList
+    run(q => (q === 3)).toList
 ```
-
 --
 
 Disjunction:
-
 ```
-run(q => (q === 3) || (q === 4)).toList
+    run(q => (q === 3) || (q === 4)).toList
 ```
-
 --
 
 Conjunction:
-
 ```
-run(q => (q === 3) && (q === 4)).toList
+    run(q => (q === 3) && (q === 4)).toList
 ```
-
 --
 
 Disunification:
-
 ```
-run(q => ((q === 3) || (q === 4)) && (q =/= 3)).toList
+    run(q => ((q === 3) || (q === 4)) && (q =/= 3)).toList
 ```
-
 ---
 
 | miniKanren Basics
---
 
 Failing goal:
-
 ```
-run(q => fail).toList
+    run(q => fail).toList
 ```
-
 --
 
 Succeeding goal:
-
 ```
-run(q => succeed).toList
+    run(q => succeed).toList
 ```
-
 --
 
 Reifying multiple logic variables:
-
 ```
-run((q, r) => succeed).toList
+    run((q, r, s, t) => succeed).toList
 ```
-
----
-
-| miniKanren Basics
 --
 
 Unifying two unbound logic variables:
-
 ```
-run((q, r) => q === r).toList
+    run((q, r, s, t) => (q === t)).toList
+```
+---
+
+| miniKanren Basics
+
+Introducing new logic variables:
+```
+    run(q =>
+      exists((a,b,c) => (q === List(a, b, c)))
+    ).toList
 ```
 --
 
 Multivariate conjunction: `all`
-
 ```
-run((q, r, s) => all((q === 1), (r === 2), (s === 3))).toList
+    run((q, r, s) => all((q === 1), (r === 2), (s === 3))).toList
 ```
-
 --
 
 Multivariate disjunction: `any`
-
 ```
-run((q, r, s) => any((q === 'Q'), (r === 'R'), (s === 'S'))).toList
+    run(q => any((q === 'Q'), (q === 'R'), (q === 'S'))).toList
 ```
-
----
-
-| miniKanren Basics
---
-
-Introducing new logic variables:
-
-```
-run(q => exists((a,b,c) => q === List(a, b, c))).toList
-```
-
---
-
-...and leaving them unbound:
-
-```
-run(q => exists((a,b,c) => succeed)).toList
-```
-
 ---
 
 | Appendo
@@ -164,8 +128,11 @@ def append[T](la: List[T], lb: List[T]): List[T] =
 val start = (1 to 5).toList
 val end = (6 to 10).toList
 val full = (1 to 10).toList
+```
+--
+```
 
-append(start, end) foreach println
+append(start, end)
 ```
 ---
 
@@ -189,7 +156,7 @@ run(q =>
 
 ---
 
-| Demo - Yachts
+| Demo - Yachts (SICP Exercise 4.43)
 
 Mary Ann Moore's father has a yacht and so has each of his four
 friends: Colonel Downing, Mr. Hall, Sir Barnacle Hood, and
@@ -203,35 +170,83 @@ Dr. Parker's daughter. Who is Lorna's father?
 
 ---
 
-| Demo - Liars
+| Demo - Liars (from Phillips 1934)
+
+Five schoolgirls sat for an examination. Their parents -- so they
+thought -- showed an undue degree of interest in the result. They
+therefore agreed that, in writing home about the examination, each
+girl should make one true statement and one untrue one. The following
+are the relevant passages from their letters:
+
+< Betty: "Kitty was second in the examination. I was only third."
+< Ethel: "You'll be glad to hear that I was on top. Joan was second."
+< Joan: "I was third, and poor old Ethel was bottom."
+< Kitty: "I came out second. Mary was only fourth."
+< Mary: "I was fourth. Top place was taken by Betty."
+
+What in fact was the order in which the five girls were placed?
+
+---
+
+| Why?
+
+< It's Declarative and concise; easy to reason about correctness.
+
+--
+
+Use it inside Scala programs!
+
+--
+
+< Use for scheduling, layout, constraints, type inference, sudoku,
+< solving/generating/exploring logic puzzles
+
+--
+
+< Interesting implementation challenges!
 
 ---
 
 | Next Steps
 
-More Constrainst -- finite domains
+More Constraints -- finite domains
 
 Nominal Logic Programming
 
-Macros
+Macros, pattern matching, and user interface
 
-Types
+Performance and implementation
+
+Unification of arbitrary case classes and HLists
+
+Typesafety!
+
+---
+
+| Next Steps
+
+Relational programming can be difficult, and requires many interesting
+tools and techniques not yet implemented here.
+
+Watch out for more puzzles and demos!
+
+Help explore limitations and drive innovation.
 
 ---
 
 | Resources
 
-The Reasoned Schemer
-
-microKanren - Jason Hemann, Daniel P. Friedman
+The Reasoned Schemer - Daniel Friedman, William Byrd, Oleg Kiselyov
 
 miniKanren PhD dissertation - William Byrd
 
-"There's a Prolog in your Scala"
+microKanren - Jason Hemann, Daniel P. Friedman
 
-David Nolen - core.logic 
+core.logic - David Nolen
 
-Nada Amin - scalogno
+"There's a Prolog in your Scala" - George Leontiev
+
+Scalogno - Nada Amin
 
 ---
 
