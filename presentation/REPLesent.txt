@@ -43,13 +43,11 @@ A relational programming language
 ---
 
 | miniKanren Basics
---
 
 Unification:
 
 ```
-val ex1 = run(q => (q === 3))
-ex1 foreach println
+run(q => (q === 3)).toList
 ```
 
 --
@@ -57,8 +55,7 @@ ex1 foreach println
 Disjunction:
 
 ```
-val ex2 = run(q => (q === 3) || (q === 4))
-ex2 foreach println
+run(q => (q === 3) || (q === 4)).toList
 ```
 
 --
@@ -66,8 +63,7 @@ ex2 foreach println
 Conjunction:
 
 ```
-val ex3 = run(q => (q === 3) && (q === 4))
-ex3 foreach println
+run(q => (q === 3) && (q === 4)).toList
 ```
 
 ---
@@ -78,8 +74,7 @@ ex3 foreach println
 Failing goal:
 
 ```
-val ex4 = run(q => fail)
-ex4 foreach println
+run(q => fail).toList
 ```
 
 --
@@ -87,8 +82,7 @@ ex4 foreach println
 Succeeding goal:
 
 ```
-val ex5 = run(q => succeed)
-ex5 foreach println
+run(q => succeed).toList
 ```
 
 --
@@ -96,8 +90,7 @@ ex5 foreach println
 Reifying multiple logic variables:
 
 ```
-val ex6 = run((q, r) => succeed)
-ex6 foreach println
+run((q, r) => succeed).toList
 ```
 
 ---
@@ -108,16 +101,14 @@ ex6 foreach println
 Unifying two unbound logic variables:
 
 ```
-val ex7 = run((q, r) => q === r)
-ex7 foreach println
+run((q, r) => q === r).toList
 ```
 --
 
 `all`
 
 ```
-val ex8 = run((q, r, s) => all((q === 1), (r === 2), (s === 3)))
-ex8 foreach println
+run((q, r, s) => all((q === 1), (r === 2), (s === 3))).toList
 ```
 
 --
@@ -125,8 +116,7 @@ ex8 foreach println
 `any`
 
 ```
-val ex9 = run((q, r, s) => any((q === 'Q'), (r === 'R'), (s === 'S')))
-ex9 foreach println
+run((q, r, s) => any((q === 'Q'), (r === 'R'), (s === 'S'))).toList
 ```
 
 ---
@@ -137,8 +127,7 @@ ex9 foreach println
 Introducing new logic variables:
 
 ```
-val ex10 = run(q => exists((a,b,c) => q == List(a, b, c)))
-ex10 foreach println
+run(q => exists((a,b,c) => q === List(a, b, c))).toList
 ```
 
 --
@@ -146,8 +135,7 @@ ex10 foreach println
 ...and leaving them unbound:
 
 ```
-val ex11 = run(q => exists((a,b,c) => succeed))
-ex11 foreach println
+run(q => exists((a,b,c) => succeed)).toList
 ```
 
 ---
@@ -168,9 +156,7 @@ def append[T](la: List[T], lb: List[T]): List[T] =
 val start = (1 to 5).toList
 val end = (6 to 10).toList
 val full = (1 to 10).toList
-```
---
-```
+
 append(start, end) foreach println
 ```
 ---
